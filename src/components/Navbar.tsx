@@ -10,7 +10,7 @@ export default function Navbar({ showBack = false }: NavbarProps) {
       <div className="container navbar__inner">
         <Link to="/" className="navbar__logo">
           <div className="navbar__logo-icon">⚡</div>
-          Noah's Tools
+          Axiom
         </Link>
 
         {showBack && (

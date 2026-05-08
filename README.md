@@ -1,4 +1,4 @@
-# Noah's Tools 🔬
+# Axiom 🔬
 
 > Interactive math and CS tools — visualizers, calculators, and algorithm demos.
 
