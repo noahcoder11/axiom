@@ -2,7 +2,7 @@
 
 > Interactive math and CS tools — visualizers, calculators, and algorithm demos.
 
-**Live site:** https://noahcoder11.github.io/tools
+**Live site:** https://noahcoder11.github.io/axiom
 
 ---
 
@@ -19,7 +19,7 @@
 
 ```bash
 npm install
-npm run dev        # start dev server at http://localhost:5173/tools/
+npm run dev        # start dev server at http://localhost:5173/axiom/
 ```
 
 ## Deploying
@@ -41,14 +41,14 @@ npm run deploy     # builds and pushes to gh-pages branch
      description: 'What it does.',
      icon: '🔢',
      tags: ['Math'],
-     path: '/tools/your-tool',
+     path: '/axiom/your-tool',
    }
    ```
 3. **Add the route** in `src/App.tsx`:
    ```tsx
    import YourTool from './pages/tools/YourTool';
    // ...
-   <Route path="/tools/your-tool" element={<YourTool />} />
+   <Route path="/axiom/your-tool" element={<YourTool />} />
    ```
 4. Done — the card appears on the hub automatically.
 

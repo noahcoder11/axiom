@@ -9,7 +9,7 @@ export default function Navbar({ showBack = false }: NavbarProps) {
     <nav className="navbar">
       <div className="container navbar__inner">
         <Link to="/" className="navbar__logo">
-          <div className="navbar__logo-icon">⚡</div>
+          <img src="/axiom/logo.png" alt="Axiom Logo" className="navbar__logo-icon" style={{ background: 'none', border: 'none' }} />
           Axiom
         </Link>
 

@@ -1,9 +1,9 @@
 {
-  "name": "tools",
+  "name": "axiom",
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://noahcoder11.github.io/tools",
+  "homepage": "https://noahcoder11.github.io/axiom",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

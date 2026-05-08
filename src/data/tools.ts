@@ -29,7 +29,7 @@ const tools: Tool[] = [
       'Visualize and compare numerical integration methods: Midpoint, Trapezoid, and Simpson\'s Rule on any function.',
     icon: '∫',
     tags: ['Calculus', 'Math'],
-    path: '/tools/approx-integration',
+    path: '/axiom/approx-integration',
   },
   {
     id: 'volume-rotation',
@@ -38,7 +38,7 @@ const tools: Tool[] = [
       'Generate 3D solids of revolution around any axis and compute their volume using the disk/shell method.',
     icon: '🔄',
     tags: ['Calculus', 'Math'],
-    path: '/tools/volume-rotation',
+    path: '/axiom/volume-rotation',
     wip: true,
   },
   {
@@ -48,7 +48,7 @@ const tools: Tool[] = [
       'Step through BFS and DFS on custom graphs. Visualize discovery order, frontier, and visited sets.',
     icon: '⬡',
     tags: ['CS', 'Algorithm'],
-    path: '/tools/graph-traversal',
+    path: '/axiom/graph-traversal',
     wip: true,
   },
   {
@@ -58,7 +58,7 @@ const tools: Tool[] = [
       'Perform row reduction, determinants, eigenvalues, and matrix multiplication with step-by-step breakdowns.',
     icon: '⊞',
     tags: ['Math', 'Algebra'],
-    path: '/tools/matrix-ops',
+    path: '/axiom/matrix-ops',
     wip: true,
   },
   {
@@ -68,7 +68,7 @@ const tools: Tool[] = [
       'Watch Quicksort, Mergesort, Heapsort, and more race against each other in real time with adjustable speed.',
     icon: '↕',
     tags: ['CS', 'Algorithm'],
-    path: '/tools/sorting-viz',
+    path: '/axiom/sorting-viz',
     wip: true,
   },
   {
@@ -78,7 +78,7 @@ const tools: Tool[] = [
       'Run Monte Carlo simulations and see how experimental probability converges to theory as sample size grows.',
     icon: '🎲',
     tags: ['Math', 'Statistics'],
-    path: '/tools/probability-sim',
+    path: '/axiom/probability-sim',
     wip: true,
   },
 ];

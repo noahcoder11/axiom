@@ -12,7 +12,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
 
         {/* ── Tool routes (uncomment as tools are built) ── */}
-        {/* <Route path="/tools/approx-integration" element={<ApproxIntegration />} /> */}
+        {/* <Route path="/axiom/approx-integration" element={<ApproxIntegration />} /> */}
 
         <Route path="*" element={<NotFound />} />
       </Routes>
