@@ -10,7 +10,7 @@ interface MathInputProps {
   label?: string;
 }
 
-export default function MathInput({ value, onChange, placeholder = 'f(x)', className = '', label }: MathInputProps) {
+export default function MathInput({ value, onChange, placeholder: _placeholder = 'f(x)', className = '', label }: MathInputProps) {
   const mfRef = useRef<MathfieldElement>(null);
   const [isFocused, setIsFocused] = useState(false);
 

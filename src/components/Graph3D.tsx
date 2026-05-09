@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Edges } from '@react-three/drei';
 import * as THREE from 'three';
@@ -164,7 +164,7 @@ function SmoothGrid({ range }: { range: number }) {
   );
 }
 
-export default function Graph3D({ expressions, className = '', style }: Graph3DProps) {
+export default function Graph3D({ expressions, className: _className = '', style: _style }: Graph3DProps) {
   const [targetRange, setTargetRange] = useState(10);
   const [range, setRange] = useState(10);
 
