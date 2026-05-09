@@ -82,7 +82,7 @@ function ApproxPrisms({ prismData = [], dx = 1, dy = 1, color = '#e879f9', range
           <mesh key={i} position={[vx, vh / 2, vy]} scale={[vdx, vdy, math.abs(vh)]} rotation={[-Math.PI / 2, 0, 0]}>
             <boxGeometry args={[1, 1, 1]} />
             <meshStandardMaterial color={color} transparent opacity={0.3} side={THREE.DoubleSide} />
-            <Edges color="#000" />
+            <Edges color={color} />
           </mesh>
         );
       })}
@@ -139,7 +139,7 @@ function ZoomHandler({ onZoom }: { onZoom: (delta: number) => void }) {
     canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
     canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
     canvas.addEventListener('touchend', handleTouchEnd);
-    
+
     return () => {
       canvas.removeEventListener('wheel', handleWheel);
       canvas.removeEventListener('touchstart', handleTouchStart);
@@ -234,22 +234,22 @@ export default function Graph3D({ expressions, className = '', style }: Graph3DP
       }}
     >
       <Canvas camera={{ position: [20, 15, 20], fov: 45 }} style={{ width: '100%', height: '100%', display: 'block' }}>
-      <ambientLight />
-      <directionalLight />
+        <ambientLight />
+        <directionalLight />
 
-      <axesHelper args={[GRID_SIZE / 2]} rotation={[-Math.PI / 2, 0, 0]} />
-      <SmoothGrid range={range} />
+        <axesHelper args={[GRID_SIZE / 2]} rotation={[-Math.PI / 2, 0, 0]} />
+        <SmoothGrid range={range} />
 
-      {expressions.map((expr) => (
-        expr.meshStyle === 'PRISM'
-          ? <ApproxPrisms key={expr.id} {...expr} range={range} />
-          : <ComputeGraphMesh key={expr.id} id={expr.id} latex={expr.latex} color={expr.color} range={range} />
-      ))}
+        {expressions.map((expr) => (
+          expr.meshStyle === 'PRISM'
+            ? <ApproxPrisms key={expr.id} {...expr} range={range} />
+            : <ComputeGraphMesh key={expr.id} id={expr.id} latex={expr.latex} color={expr.color} range={range} />
+        ))}
 
-      <SmoothRange targetRange={targetRange} onRangeUpdate={setRange} />
-      <ZoomHandler onZoom={handleZoom} />
-      <OrbitControls enableZoom={false} />
-    </Canvas>
+        <SmoothRange targetRange={targetRange} onRangeUpdate={setRange} />
+        <ZoomHandler onZoom={handleZoom} />
+        <OrbitControls enableZoom={false} />
+      </Canvas>
     </div>
   );
 }

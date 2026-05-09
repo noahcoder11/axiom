@@ -10,18 +10,21 @@ export default function IntegrationWidget3D() {
   const [asciiFunc, setAsciiFunc] = useState('(1/30)*x^2 + (1/30) * y^2');
 
   const [lowerBoundX, setLowerBoundX] = useState('0');
-  const [upperBoundX, setUpperBoundX] = useState('1');
+  const [upperBoundX, setUpperBoundX] = useState('10');
   const [lowerBoundY, setLowerBoundY] = useState('0');
-  const [upperBoundY, setUpperBoundY] = useState('1');
-  const [intervals_x, setIntervalsX] = useState('10');
-  const [intervals_y, setIntervalsY] = useState('10');
+  const [upperBoundY, setUpperBoundY] = useState('10');
+  const [intervalsX, setIntervalsX] = useState('10');
+  const [intervalsY, setIntervalsY] = useState('10');
   const [method, setMethod] = useState('midpoint');
+  
+  const [showFunction, setShowFunction] = useState(true);
+  const [showPrisms, setShowPrisms] = useState(true);
 
   const graphExpressions = useMemo<Graph3DExpression[]>(() => {
     const exprs: Graph3DExpression[] = [];
 
     // 1. Plot the main function
-    if (asciiFunc) {
+    if (asciiFunc && showFunction) {
       exprs.push({
         id: 'f',
         latex: asciiFunc,
@@ -37,8 +40,8 @@ export default function IntegrationWidget3D() {
           const bx = Number(upperBoundX);
           const ay = Number(lowerBoundY);
           const by = Number(upperBoundY);
-          const nx = Number(intervals_x);
-          const ny = Number(intervals_y);
+          const nx = Number(intervalsX);
+          const ny = Number(intervalsY);
           const dx = (bx - ax) / nx;
           const dy = (by - ay) / ny;
           const prisms: { x: number; y: number; height: number }[] = [];
@@ -50,14 +53,16 @@ export default function IntegrationWidget3D() {
               prisms.push({ x, y, height });
             }
           }
-          exprs.push({
-            id: 'prisms',
-            dx,
-            dy,
-            prismData: prisms,  // ← this was missing!
-            color: '#e879f9',
-            meshStyle: 'PRISM'
-          });
+          if (showPrisms) {
+            exprs.push({
+              id: 'prisms',
+              dx,
+              dy,
+              prismData: prisms,
+              color: '#e879f9',
+              meshStyle: 'PRISM'
+            });
+          }
         } catch (e) {
           // expression not valid yet
         }
@@ -65,95 +70,77 @@ export default function IntegrationWidget3D() {
     }
 
     return exprs;
-  }, [latexFunc, lowerBoundX, upperBoundX, lowerBoundY, upperBoundY, intervals_x, intervals_y, method]);
-  /*
-    const approximation = useMemo(() => {
-      if (latexFunc && lowerBound && upperBound && intervals && method) {
-        const f = math.compile(asciiFunc);
-        const a = Number(lowerBound);
-        const b = Number(upperBound);
-        const n = Number(intervals);
-        const dx = (b - a) / n;
-  
-        switch (method) {
-          case 'left': {
-            let sum = 0;
-            for (let i = 0; i < n; i++) {
-              sum += f.evaluate({ x: a + i * dx });
-            }
-            return sum * dx;
-          }
-          case 'right': {
-            let sum = 0;
-            for (let i = 0; i < n; i++) {
-              sum += f.evaluate({ x: a + (i + 1) * dx });
-            }
-            return sum * dx;
-          }
-          case 'midpoint': {
-            let sum = 0;
-            for (let i = 0; i < n; i++) {
-              sum += f.evaluate({ x: a + (i + 0.5) * dx });
-            }
-            return sum * dx;
-          }
-          case 'trapezoid': {
-            let sum = 0;
-            for (let i = 0; i < n; i++) {
-              sum += (f.evaluate({ x: a + i * dx }) + f.evaluate({ x: a + (i + 1) * dx })) / 2;
-            }
-            return sum * dx;
-          }
-          case 'simpson': {
-            let sum = 0;
-            for (let i = 0; i < n; i += 2) {
-              const x0 = a + i * dx;
-              const x1 = a + (i + 1) * dx;
-              const x2 = a + (i + 2) * dx;
-              const y0 = f.evaluate({ x: x0 });
-              const y1 = f.evaluate({ x: x1 });
-              const y2 = f.evaluate({ x: x2 });
-              sum += (y0 + 4 * y1 + y2) / 3;
-            }
-            return sum * dx;
-          }
-        }
-      }
-      return undefined;
-    }, [latexFunc, lowerBound, upperBound, intervals, method]);
-  
-    const exactResult = useMemo(() => {
-      if (latexFunc && lowerBound && upperBound && asciiFunc) {
-        try {
-          const f = math.compile(asciiFunc);
-          const a = Number(lowerBound);
-          const b = Number(upperBound);
-  
-          const n = 10000;
-          const dx = (b - a) / n;
-  
+  }, [latexFunc, lowerBoundX, upperBoundX, lowerBoundY, upperBoundY, intervalsX, intervalsY, method, showFunction, showPrisms]);
+
+  const approximation = useMemo(() => {
+    if (latexFunc && lowerBoundX && upperBoundX && intervalsX && lowerBoundY && upperBoundY && intervalsY && method) {
+      const f = math.compile(asciiFunc);
+      const a = Number(lowerBoundX);
+      const b = Number(upperBoundX);
+      const c = Number(lowerBoundY);
+      const d = Number(upperBoundY);
+      const n = Number(intervalsX);
+      const m = Number(intervalsY);
+      const dx = (b - a) / n;
+      const dy = (d - c) / m;
+
+      switch (method) {
+        case 'midpoint': {
           let sum = 0;
-          for (let i = 0; i < n; i += 2) {
-            const x0 = a + i * dx;
-            const x1 = a + (i + 1) * dx;
-            const x2 = a + (i + 2) * dx;
-            const y0 = f.evaluate({ x: x0 });
-            const y1 = f.evaluate({ x: x1 });
-            const y2 = f.evaluate({ x: x2 });
-            sum += (y0 + 4 * y1 + y2) / 3;
+
+          for (let i = 0; i < n; i++) {
+            for (let j = 0; j < m; j++) {
+              sum += f.evaluate({ x: a + (i + 0.5) * dx, y: c + (j + 0.5) * dy });
+            }
           }
-  
-          const exact = sum * dx;
-          if (!isNaN(exact) && isFinite(exact)) {
-            return exact;
-          }
-        } catch (e) {
-          console.error("Exact evaluation failed:", e);
+
+          return sum * dx * dy;
         }
       }
-      return undefined;
-    }, [latexFunc, asciiFunc, lowerBound, upperBound]);
-  */
+    }
+    return undefined;
+  }, [latexFunc, asciiFunc, lowerBoundX, upperBoundX, lowerBoundY, upperBoundY, intervalsX, intervalsY, method]);
+
+  const exactResult = useMemo(() => {
+    if (latexFunc && asciiFunc && lowerBoundX && upperBoundX && lowerBoundY && upperBoundY) {
+      try {
+        const f = math.compile(asciiFunc);
+        const a = Number(lowerBoundX);
+        const b = Number(upperBoundX);
+        const c = Number(lowerBoundY);
+        const d = Number(upperBoundY);
+
+        // For "exact" value, we use a 100x100 grid with 2D Simpson's rule.
+        // This requires exactly 10,000 evaluations, which is fast enough for JS.
+        const N = 100;
+        const M = 100;
+        const dx = (b - a) / N;
+        const dy = (d - c) / M;
+
+        let sum = 0;
+        for (let i = 0; i <= N; i++) {
+          const wx = (i === 0 || i === N) ? 1 : (i % 2 !== 0 ? 4 : 2);
+          const x = a + i * dx;
+
+          for (let j = 0; j <= M; j++) {
+            const wy = (j === 0 || j === M) ? 1 : (j % 2 !== 0 ? 4 : 2);
+            const y = c + j * dy;
+
+            const weight = wx * wy;
+            sum += weight * f.evaluate({ x, y });
+          }
+        }
+
+        const exact = sum * (dx * dy) / 9;
+        if (!isNaN(exact) && isFinite(exact)) {
+          return exact;
+        }
+      } catch (e) {
+        console.error("Exact evaluation failed:", e);
+      }
+    }
+    return undefined;
+  }, [latexFunc, asciiFunc, lowerBoundX, upperBoundX, lowerBoundY, upperBoundY]);
 
   return (
     <div className="responsive-grid">
@@ -174,7 +161,7 @@ export default function IntegrationWidget3D() {
 
           <div style={{ display: 'flex', gap: 'var(--space-md)' }}>
             <div style={{ flex: 1 }}>
-              <label className="math-input-label" style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--color-text-subtle)' }}>Lower Bound (a)</label>
+              <label className="math-input-label" style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--color-text-subtle)' }}>Lower Bound X (a)</label>
               <input
                 type="number"
                 value={lowerBoundX}
@@ -184,7 +171,7 @@ export default function IntegrationWidget3D() {
               />
             </div>
             <div style={{ flex: 1 }}>
-              <label className="math-input-label" style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--color-text-subtle)' }}>Upper Bound (b)</label>
+              <label className="math-input-label" style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--color-text-subtle)' }}>Upper Bound X (b)</label>
               <input
                 type="number"
                 value={upperBoundX}
@@ -197,7 +184,7 @@ export default function IntegrationWidget3D() {
 
           <div style={{ display: 'flex', gap: 'var(--space-md)' }}>
             <div style={{ flex: 1 }}>
-              <label className="math-input-label" style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--color-text-subtle)' }}>Lower Bound (a)</label>
+              <label className="math-input-label" style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--color-text-subtle)' }}>Lower Bound Y (c)</label>
               <input
                 type="number"
                 value={lowerBoundY}
@@ -207,7 +194,7 @@ export default function IntegrationWidget3D() {
               />
             </div>
             <div style={{ flex: 1 }}>
-              <label className="math-input-label" style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--color-text-subtle)' }}>Upper Bound (b)</label>
+              <label className="math-input-label" style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--color-text-subtle)' }}>Upper Bound Y (d)</label>
               <input
                 type="number"
                 value={upperBoundY}
@@ -223,7 +210,7 @@ export default function IntegrationWidget3D() {
               <label className="math-input-label" style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--color-text-subtle)' }}>X Intervals (n)</label>
               <input
                 type="number"
-                value={intervals_x}
+                value={intervalsX}
                 onChange={(e) => setIntervalsX(e.target.value)}
                 className="search-input"
                 style={{ paddingLeft: '14px' }}
@@ -236,7 +223,7 @@ export default function IntegrationWidget3D() {
               <label className="math-input-label" style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--color-text-subtle)' }}>Y Intervals (m)</label>
               <input
                 type="number"
-                value={intervals_y}
+                value={intervalsY}
                 onChange={(e) => setIntervalsY(e.target.value)}
                 className="search-input"
                 style={{ paddingLeft: '14px' }}
@@ -253,13 +240,20 @@ export default function IntegrationWidget3D() {
                 className="search-input"
                 style={{ paddingLeft: '14px', width: '100%', cursor: 'pointer' }}
               >
-                <option value="left">Left Endpoint Rule</option>
-                <option value="right">Right Endpoint Rule</option>
                 <option value="midpoint">Midpoint Rule</option>
-                <option value="trapezoid">Trapezoid Rule</option>
-                <option value="simpson">Simpson's Rule</option>
               </select>
             </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 'var(--space-md)', alignItems: 'center', marginTop: 'var(--space-xs)' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', cursor: 'pointer', color: 'var(--color-text-subtle)' }}>
+              <input type="checkbox" checked={showFunction} onChange={(e) => setShowFunction(e.target.checked)} style={{ cursor: 'pointer', accentColor: 'var(--color-accent)' }} />
+              Show Function
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', cursor: 'pointer', color: 'var(--color-text-subtle)' }}>
+              <input type="checkbox" checked={showPrisms} onChange={(e) => setShowPrisms(e.target.checked)} style={{ cursor: 'pointer', accentColor: 'var(--color-accent)' }} />
+              Show Prisms
+            </label>
           </div>
         </div>
 
@@ -267,7 +261,8 @@ export default function IntegrationWidget3D() {
         <div style={{ marginTop: 'var(--space-xl)' }}>
           <h2 style={{ fontSize: '18px', marginBottom: 'var(--space-md)' }}>Results</h2>
           <div style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
-
+            Approximate Integral: {approximation?.toFixed(10)}<br />
+            Actual Value: {exactResult?.toFixed(10)}
           </div>
         </div>
       </div>
