@@ -90,7 +90,7 @@ function ApproxPrisms({ prismData = [], dx = 1, dy = 1, color = '#e879f9', range
   );
 }
 
-// Intercepts scroll wheel to change the math range instead of moving the camera
+// Intercepts scroll wheel and pinch gestures to change the math range instead of moving the camera
 function ZoomHandler({ onZoom }: { onZoom: (delta: number) => void }) {
   const { gl } = useThree();
 
@@ -100,8 +100,52 @@ function ZoomHandler({ onZoom }: { onZoom: (delta: number) => void }) {
       e.preventDefault();
       onZoom(e.deltaY);
     };
+
+    let initialPinchDistance: number | null = null;
+
+    const getPinchDistance = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+      }
+      return null;
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        initialPinchDistance = getPinchDistance(e);
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && initialPinchDistance !== null) {
+        e.preventDefault(); // prevent scrolling
+        const currentPinchDistance = getPinchDistance(e);
+        if (currentPinchDistance) {
+          // Invert delta so moving fingers apart zooms in (like scrolling up)
+          const delta = initialPinchDistance - currentPinchDistance;
+          onZoom(delta * 5); // Adjust sensitivity for touch
+          initialPinchDistance = currentPinchDistance;
+        }
+      }
+    };
+
+    const handleTouchEnd = () => {
+      initialPinchDistance = null;
+    };
+
     canvas.addEventListener('wheel', handleWheel, { passive: false });
-    return () => canvas.removeEventListener('wheel', handleWheel);
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+    canvas.addEventListener('touchend', handleTouchEnd);
+    
+    return () => {
+      canvas.removeEventListener('wheel', handleWheel);
+      canvas.removeEventListener('touchstart', handleTouchStart);
+      canvas.removeEventListener('touchmove', handleTouchMove);
+      canvas.removeEventListener('touchend', handleTouchEnd);
+    };
   }, [gl, onZoom]);
 
   return null;

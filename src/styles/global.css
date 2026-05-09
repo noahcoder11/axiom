@@ -167,3 +167,16 @@ img, svg {
 .stagger > *:nth-child(6) { animation-delay: 300ms; }
 .stagger > *:nth-child(7) { animation-delay: 360ms; }
 .stagger > *:nth-child(8) { animation-delay: 420ms; }
+
+/* ---- Responsive Grid ---- */
+.responsive-grid {
+  display: grid;
+  gap: var(--space-lg);
+  grid-template-columns: minmax(300px, 1fr) minmax(300px, 2fr);
+}
+
+@media (max-width: 768px) {
+  .responsive-grid {
+    grid-template-columns: 1fr;
+  }
+}

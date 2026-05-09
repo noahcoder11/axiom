@@ -156,7 +156,7 @@ export default function IntegrationWidget3D() {
   */
 
   return (
-    <div style={{ display: 'grid', gap: 'var(--space-lg)', gridTemplateColumns: 'minmax(300px, 1fr) minmax(300px, 2fr)' }}>
+    <div className="responsive-grid">
 
       {/* --- INPUT PANEL --- */}
       <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-lg)', height: 'fit-content' }}>
