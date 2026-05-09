@@ -208,7 +208,7 @@ function SmoothGrid({ range }: { range: number }) {
   );
 }
 
-export default function Graph3D({ expressions, className: _className = '', style: _style }: Graph3DProps) {
+export default function Graph3D({ expressions, className = '', style }: Graph3DProps) {
   const [targetRange, setTargetRange] = useState(10);
   const [range, setRange] = useState(10);
 
@@ -220,7 +220,20 @@ export default function Graph3D({ expressions, className: _className = '', style
   }, []);
 
   return (
-    <Canvas camera={{ position: [20, 15, 20], fov: 45 }}>
+    <div
+      className={className}
+      style={{
+        width: '100%',
+        height: '100%',
+        minHeight: '400px',
+        borderRadius: 'var(--radius-lg)',
+        overflow: 'hidden',
+        border: '1px solid var(--color-border)',
+        position: 'relative',
+        ...style
+      }}
+    >
+      <Canvas camera={{ position: [20, 15, 20], fov: 45 }} style={{ width: '100%', height: '100%', display: 'block' }}>
       <ambientLight />
       <directionalLight />
 
@@ -237,5 +250,6 @@ export default function Graph3D({ expressions, className: _className = '', style
       <ZoomHandler onZoom={handleZoom} />
       <OrbitControls enableZoom={false} />
     </Canvas>
+    </div>
   );
 }
