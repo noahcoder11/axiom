@@ -16,7 +16,7 @@ export default function IntegrationWidget3D() {
   const [intervalsX, setIntervalsX] = useState('10');
   const [intervalsY, setIntervalsY] = useState('10');
   const [method, setMethod] = useState('midpoint');
-  
+
   const [showFunction, setShowFunction] = useState(true);
   const [showPrisms, setShowPrisms] = useState(true);
 
@@ -24,13 +24,15 @@ export default function IntegrationWidget3D() {
     const exprs: Graph3DExpression[] = [];
 
     // 1. Plot the main function
-    if (asciiFunc && showFunction) {
-      exprs.push({
-        id: 'f',
-        latex: asciiFunc,
-        color: '#7c6fff', // Axiom accent color
-        meshStyle: 'SURFACE'
-      });
+    if (asciiFunc) {
+      if (showFunction) {
+        exprs.push({
+          id: 'f',
+          latex: asciiFunc,
+          color: '#7c6fff', // Axiom accent color
+          meshStyle: 'SURFACE'
+        });
+      }
 
       // The 3D Volume Approximation logic for rectangles/cuboids will go here!
       if (!isNaN(Number(lowerBoundX)) && !isNaN(Number(lowerBoundY)) && !isNaN(Number(upperBoundX)) && !isNaN(Number(upperBoundY))) {
@@ -74,28 +76,32 @@ export default function IntegrationWidget3D() {
 
   const approximation = useMemo(() => {
     if (latexFunc && lowerBoundX && upperBoundX && intervalsX && lowerBoundY && upperBoundY && intervalsY && method) {
-      const f = math.compile(asciiFunc);
-      const a = Number(lowerBoundX);
-      const b = Number(upperBoundX);
-      const c = Number(lowerBoundY);
-      const d = Number(upperBoundY);
-      const n = Number(intervalsX);
-      const m = Number(intervalsY);
-      const dx = (b - a) / n;
-      const dy = (d - c) / m;
+      try {
+        const f = math.compile(asciiFunc);
+        const a = Number(lowerBoundX);
+        const b = Number(upperBoundX);
+        const c = Number(lowerBoundY);
+        const d = Number(upperBoundY);
+        const n = Number(intervalsX);
+        const m = Number(intervalsY);
+        const dx = (b - a) / n;
+        const dy = (d - c) / m;
 
-      switch (method) {
-        case 'midpoint': {
-          let sum = 0;
+        switch (method) {
+          case 'midpoint': {
+            let sum = 0;
 
-          for (let i = 0; i < n; i++) {
-            for (let j = 0; j < m; j++) {
-              sum += f.evaluate({ x: a + (i + 0.5) * dx, y: c + (j + 0.5) * dy });
+            for (let i = 0; i < n; i++) {
+              for (let j = 0; j < m; j++) {
+                sum += f.evaluate({ x: a + (i + 0.5) * dx, y: c + (j + 0.5) * dy });
+              }
             }
-          }
 
-          return sum * dx * dy;
+            return sum * dx * dy;
+          }
         }
+      } catch (e) {
+        // invalid math expression, ignore
       }
     }
     return undefined;

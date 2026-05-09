@@ -81,7 +81,7 @@ function ApproxPrisms({ prismData = [], dx = 1, dy = 1, color = '#e879f9', range
         return (
           <mesh key={i} position={[vx, vh / 2, vy]} scale={[vdx, vdy, math.abs(vh)]} rotation={[-Math.PI / 2, 0, 0]}>
             <boxGeometry args={[1, 1, 1]} />
-            <meshStandardMaterial color={color} transparent opacity={0.3} side={THREE.DoubleSide} />
+            <meshStandardMaterial color={color} transparent opacity={0.3} />
             <Edges color={color} />
           </mesh>
         );
