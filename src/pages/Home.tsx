@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 import ToolCard from '../components/ToolCard';
 import tools from '../data/tools';
 import type { Tag } from '../data/tools';
@@ -132,19 +133,7 @@ export default function Home() {
       </main>
 
       {/* ── Footer ── */}
-      <footer className="container">
-        <div className="footer">
-          <span className="footer__text">Built by Noah · {new Date().getFullYear()}</span>
-          <a
-            href="https://github.com/noahcoder11/tools"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="footer__link"
-          >
-            View on GitHub →
-          </a>
-        </div>
-      </footer>
+      <Footer />
     </>
   );
 }
