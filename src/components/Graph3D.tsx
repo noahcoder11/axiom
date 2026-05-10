@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Edges } from '@react-three/drei';
 import * as THREE from 'three';
 import * as math from 'mathjs';
+import { STLExporter } from 'three-stdlib';
 
 export interface Graph3DExpression {
   id: string;
@@ -158,7 +159,7 @@ function SmoothRange({ targetRange, onRangeUpdate }: { targetRange: number; onRa
   useFrame((_, delta) => {
     const ratio = targetRange / currentRange.current;
     if (Math.abs(ratio - 1) > 0.0005) {
-      // Exponential interpolation — smooth for multiplicative zoom
+      // Exponential interpolation - smooth for multiplicative zoom
       const t = 1 - Math.pow(0.001, delta); // frame-rate independent smoothing
       currentRange.current *= Math.pow(ratio, t);
       onRangeUpdate(currentRange.current);
@@ -208,9 +209,29 @@ function SmoothGrid({ range }: { range: number }) {
   );
 }
 
-export default function Graph3D({ expressions, className = '', style }: Graph3DProps) {
+export interface Graph3DHandle {
+  exportSTL: () => void;
+}
+
+const Graph3D = forwardRef<Graph3DHandle, Graph3DProps>(({ expressions, className = '', style }, ref) => {
   const [targetRange, setTargetRange] = useState(10);
   const [range, setRange] = useState(10);
+  const exportGroupRef = useRef<THREE.Group>(null);
+
+  useImperativeHandle(ref, () => ({
+    exportSTL: () => {
+      if (!exportGroupRef.current) return;
+      const exporter = new STLExporter();
+      const stlString = exporter.parse(exportGroupRef.current);
+      const blob = new Blob([stlString], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'approximation.stl';
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+  }));
 
   const handleZoom = useCallback((delta: number) => {
     setTargetRange(prev => {
@@ -240,11 +261,13 @@ export default function Graph3D({ expressions, className = '', style }: Graph3DP
         <axesHelper args={[GRID_SIZE / 2]} rotation={[-Math.PI / 2, 0, 0]} />
         <SmoothGrid range={range} />
 
-        {expressions.map((expr) => (
-          expr.meshStyle === 'PRISM'
-            ? <ApproxPrisms key={expr.id} {...expr} range={range} />
-            : <ComputeGraphMesh key={expr.id} id={expr.id} latex={expr.latex} color={expr.color} range={range} />
-        ))}
+        <group ref={exportGroupRef}>
+          {expressions.map((expr) => (
+            expr.meshStyle === 'PRISM'
+              ? <ApproxPrisms key={expr.id} {...expr} range={range} />
+              : <ComputeGraphMesh key={expr.id} id={expr.id} latex={expr.latex} color={expr.color} range={range} />
+          ))}
+        </group>
 
         <SmoothRange targetRange={targetRange} onRangeUpdate={setRange} />
         <ZoomHandler onZoom={handleZoom} />
@@ -252,4 +275,6 @@ export default function Graph3D({ expressions, className = '', style }: Graph3DP
       </Canvas>
     </div>
   );
-}
+});
+
+export default Graph3D;

@@ -1,10 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import * as math from 'mathjs';
 import MathInput from './MathInput';
-import type { Graph3DExpression } from './Graph3D';
+import type { Graph3DExpression, Graph3DHandle } from './Graph3D';
 import Graph3D from './Graph3D';
 
+
 export default function IntegrationWidget3D() {
+
+  const graphRef = useRef<Graph3DHandle>(null);
 
   const [latexFunc, setLatexFunc] = useState('$$ \\frac{1}{30}x^2+\\frac{1}{30}y^2 $$');
   const [asciiFunc, setAsciiFunc] = useState('(1/30)*x^2 + (1/30) * y^2');
@@ -274,8 +277,25 @@ export default function IntegrationWidget3D() {
       </div>
 
       {/* --- RESULTS PANEL (Desmos Graph) --- */}
-      <div>
-        <Graph3D expressions={graphExpressions} style={{ height: '500px' }} />
+      <div style={{ position: 'relative' }}>
+        <button
+          onClick={() => graphRef.current?.exportSTL()}
+          style={{
+            position: 'absolute',
+            top: '16px',
+            right: '16px',
+            zIndex: 10, /* ensures it sits on top of canvas */
+            padding: '8px 16px',
+            background: 'var(--color-surface)',
+            border: '1px solid var(--color-border)',
+            borderRadius: '8px',
+            color: 'white',
+            cursor: 'pointer'
+          }}
+        >
+          Download STL
+        </button>
+        <Graph3D ref={graphRef} expressions={graphExpressions} style={{ height: '500px' }} />
       </div>
 
     </div>);
