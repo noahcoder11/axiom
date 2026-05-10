@@ -31,7 +31,7 @@ const GRID_SEGMENTS = 50;   // Vertex density
 function ComputeGraphMesh({ latex, color = '#7c6fff', range, thickness = 0.5, isExport = false }: Graph3DExpression & { range: number, thickness?: number, isExport?: boolean }) {
   const geometryRef = useRef<THREE.BoxGeometry>(null);
   const vertexSides = useRef<Int8Array | null>(null);
-  
+
   // Memoize the compiled function to avoid recompiling on every render
   const compiledFunc = useMemo(() => {
     if (!latex) return null;
@@ -49,7 +49,7 @@ function ComputeGraphMesh({ latex, color = '#7c6fff', range, thickness = 0.5, is
     try {
       const attr = geometryRef.current.attributes.position;
       const positions = attr.array as Float32Array;
-      
+
       // Initialize vertex sides if not already done
       if (!vertexSides.current) {
         vertexSides.current = new Int8Array(positions.length / 3);
@@ -59,14 +59,19 @@ function ComputeGraphMesh({ latex, color = '#7c6fff', range, thickness = 0.5, is
         }
       }
 
-      const halfGrid = GRID_SIZE / 2;
+      // For visual, we scale to the fixed GRID_SIZE.
+      // For export, we want 1 math unit = 1 visual unit (1mm).
+      const visualScale = isExport ? range : (GRID_SIZE / 2);
 
       for (let i = 0; i < positions.length; i += 3) {
+        // Initial positions for BoxGeometry are -GRID_SIZE/2 to GRID_SIZE/2
         const xPos = positions[i];
         const yPos = positions[i + 1];
         const side = vertexSides.current[i / 3];
 
-        // Map visual position (-10..10) to math coordinate (-range..range)
+        // Map initial visual position (-10..10) to math coordinate (-range..range)
+        // Note: GRID_SIZE is 20, so halfGrid is 10.
+        const halfGrid = GRID_SIZE / 2;
         const x = (xPos / halfGrid) * range;
         const y = (yPos / halfGrid) * range;
 
@@ -77,13 +82,21 @@ function ComputeGraphMesh({ latex, color = '#7c6fff', range, thickness = 0.5, is
         } catch (e) {
           z = 0;
         }
-        
-        const visualZ = (z / range) * halfGrid;
+
+        // In export mode, visualScale is 'range', so visualZ is just 'z'.
+        // This makes 1 math unit = 1 unit in the STL.
+        const visualZ = isExport ? z : (z / range) * halfGrid;
 
         if (side > 0) {
           positions[i + 2] = visualZ + thickness;
         } else {
           positions[i + 2] = visualZ;
+        }
+
+        // If exporting, we also need to adjust X and Y to be 1:1 with math units
+        if (isExport) {
+          positions[i] = x;
+          positions[i + 1] = y;
         }
       }
 
@@ -92,7 +105,7 @@ function ComputeGraphMesh({ latex, color = '#7c6fff', range, thickness = 0.5, is
     } catch (e) {
       console.error("Mesh calculation error:", e);
     }
-  }, [compiledFunc, range, thickness])
+  }, [compiledFunc, range, thickness, isExport])
 
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]}>
@@ -105,7 +118,6 @@ function ComputeGraphMesh({ latex, color = '#7c6fff', range, thickness = 0.5, is
     </mesh>
   )
 }
-
 function ApproxPrisms({ prismData = [], dx = 1, dy = 1, color = '#e879f9', range = 10 }: Graph3DExpression & { range: number }) {
   const halfGrid = GRID_SIZE / 2;
   const scale = halfGrid / range; // visual units per math unit
@@ -261,18 +273,18 @@ const Graph3D = forwardRef<Graph3DHandle, Graph3DProps>(({ expressions, classNam
   useImperativeHandle(ref, () => ({
     exportSTL: () => {
       if (!exportGroupRef.current) return;
-      
+
       const group = exportGroupRef.current;
       const wasVisible = group.visible;
       group.visible = true;
-      
+
       // Crucial: Update matrices for all nested children
       group.updateMatrixWorld(true);
 
       const exporter = new STLExporter();
       // Binary STL is much more robust for complex models with many prisms
       const stlData = exporter.parse(group, { binary: true }) as DataView;
-      
+
       group.visible = wasVisible;
 
       // Use the buffer directly, cast to any to bypass strict ArrayBufferLike vs BlobPart checks in some TS versions
@@ -327,16 +339,15 @@ const Graph3D = forwardRef<Graph3DHandle, Graph3DProps>(({ expressions, classNam
         <group ref={exportGroupRef} visible={false}>
           {expressions.map((expr) => {
             if (expr.meshStyle === 'PRISM') {
-              const halfGrid = GRID_SIZE / 2;
-              const scale = halfGrid / range;
+              // 1:1 Scale for export: 1 math unit = 1mm (1 visual unit)
               return (
                 <group key={`exp-${expr.id}`}>
                   {(expr.prismData || []).map((p, i) => {
-                    const vx = p.x * scale;
-                    const vy = p.y * scale;
-                    const vh = p.height * scale;
-                    const vdx = (expr.dx || 1) * scale;
-                    const vdy = (expr.dy || 1) * scale;
+                    const vx = p.x;
+                    const vy = p.y;
+                    const vh = p.height;
+                    const vdx = (expr.dx || 1);
+                    const vdy = (expr.dy || 1);
                     return (
                       <mesh key={`exp-prism-${i}`} position={[vx, vh / 2, vy]} scale={[vdx, vdy, Math.abs(vh)]} rotation={[-Math.PI / 2, 0, 0]}>
                         <boxGeometry args={[1, 1, 1]} />
@@ -347,7 +358,7 @@ const Graph3D = forwardRef<Graph3DHandle, Graph3DProps>(({ expressions, classNam
                 </group>
               );
             } else {
-              return <ComputeGraphMesh key={`exp-${expr.id}-${expr.latex}`} id={expr.id} latex={expr.latex} color="#ffffff" range={range} thickness={2.0} isExport={true} />;
+              return <ComputeGraphMesh key={`exp-${expr.id}-${expr.latex}`} id={expr.id} latex={expr.latex} color="#ffffff" range={range} thickness={1.0} isExport={true} />;
             }
           })}
         </group>
