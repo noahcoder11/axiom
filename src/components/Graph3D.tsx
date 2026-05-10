@@ -275,7 +275,8 @@ const Graph3D = forwardRef<Graph3DHandle, Graph3DProps>(({ expressions, classNam
       
       group.visible = wasVisible;
 
-      const blob = new Blob([stlData.buffer], { type: 'application/octet-stream' });
+      // Use the buffer directly, cast to any to bypass strict ArrayBufferLike vs BlobPart checks in some TS versions
+      const blob = new Blob([stlData.buffer as any], { type: 'application/octet-stream' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
