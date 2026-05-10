@@ -59,10 +59,6 @@ function ComputeGraphMesh({ latex, color = '#7c6fff', range, thickness = 0.5, is
         }
       }
 
-      // For visual, we scale to the fixed GRID_SIZE.
-      // For export, we want 1 math unit = 1 visual unit (1mm).
-      const visualScale = isExport ? range : (GRID_SIZE / 2);
-
       for (let i = 0; i < positions.length; i += 3) {
         // Initial positions for BoxGeometry are -GRID_SIZE/2 to GRID_SIZE/2
         const xPos = positions[i];
