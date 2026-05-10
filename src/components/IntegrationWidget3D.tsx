@@ -10,11 +10,11 @@ export default function IntegrationWidget3D() {
   const graphRef = useRef<Graph3DHandle>(null);
 
   const [latexFunc, setLatexFunc] = useState('$$ \\frac{1}{30}x^2+\\frac{1}{30}y^2 $$');
-  const [asciiFunc, setAsciiFunc] = useState('(1/30)*x^2 + (1/30) * y^2');
+  const [asciiFunc, setAsciiFunc] = useState('(1/10)*x^2 + (1/10) * y^2');
 
-  const [lowerBoundX, setLowerBoundX] = useState('0');
+  const [lowerBoundX, setLowerBoundX] = useState('-5');
   const [upperBoundX, setUpperBoundX] = useState('10');
-  const [lowerBoundY, setLowerBoundY] = useState('0');
+  const [lowerBoundY, setLowerBoundY] = useState('-5');
   const [upperBoundY, setUpperBoundY] = useState('10');
   const [intervalsX, setIntervalsX] = useState('10');
   const [intervalsY, setIntervalsY] = useState('10');
