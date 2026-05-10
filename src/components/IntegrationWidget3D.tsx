@@ -152,13 +152,13 @@ export default function IntegrationWidget3D() {
   }, [latexFunc, asciiFunc, lowerBoundX, upperBoundX, lowerBoundY, upperBoundY]);
 
   return (
-    <div className="responsive-grid">
+    <div className="responsive-grid" style={{ alignItems: 'stretch' }}>
 
       {/* --- INPUT PANEL --- */}
-      <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-lg)', height: 'fit-content' }}>
+      <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-lg)', height: '100%', display: 'flex', flexDirection: 'column' }}>
         <h2 style={{ fontSize: '18px', marginBottom: 'var(--space-md)' }}>Parameters</h2>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)', flex: 1 }}>
           <MathInput
             label="Function f(x, y)"
             value={latexFunc}
@@ -277,7 +277,7 @@ export default function IntegrationWidget3D() {
       </div>
 
       {/* --- RESULTS PANEL (Desmos Graph) --- */}
-      <div style={{ position: 'relative' }}>
+      <div style={{ position: 'relative', height: '100%' }}>
         <button
           onClick={() => graphRef.current?.exportSTL()}
           style={{
@@ -295,7 +295,7 @@ export default function IntegrationWidget3D() {
         >
           Download STL
         </button>
-        <Graph3D ref={graphRef} expressions={graphExpressions} style={{ height: '500px' }} />
+        <Graph3D ref={graphRef} expressions={graphExpressions} style={{ height: '600px' }} />
       </div>
 
     </div>);
