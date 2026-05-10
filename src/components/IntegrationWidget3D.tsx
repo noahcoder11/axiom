@@ -152,7 +152,7 @@ export default function IntegrationWidget3D() {
   }, [latexFunc, asciiFunc, lowerBoundX, upperBoundX, lowerBoundY, upperBoundY]);
 
   return (
-    <div className="responsive-grid" style={{ alignItems: 'flex-start', paddingBottom: 'var(--space-2xl)' }}>
+    <div className="responsive-grid" style={{ alignItems: 'stretch', paddingBottom: 'var(--space-2xl)' }}>
 
       {/* --- INPUT PANEL --- */}
       <div style={{ 
@@ -160,11 +160,14 @@ export default function IntegrationWidget3D() {
         border: '1px solid var(--color-border)', 
         borderRadius: 'var(--radius-lg)', 
         padding: 'var(--space-lg)',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%'
       }}>
         <h2 style={{ fontSize: '18px', marginBottom: 'var(--space-md)' }}>Parameters</h2>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)', flex: 1 }}>
           <MathInput
             label="Function f(x, y)"
             value={latexFunc}

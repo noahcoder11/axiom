@@ -231,13 +231,22 @@ export default function IntegrationWidget2D() {
 
 
   return (
-    <div className="responsive-grid">
+    <div className="responsive-grid" style={{ alignItems: 'stretch', paddingBottom: 'var(--space-2xl)' }}>
 
       {/* --- INPUT PANEL --- */}
-      <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-lg)', height: 'fit-content' }}>
+      <div style={{ 
+        background: 'var(--color-surface)', 
+        border: '1px solid var(--color-border)', 
+        borderRadius: 'var(--radius-lg)', 
+        padding: 'var(--space-lg)',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%'
+      }}>
         <h2 style={{ fontSize: '18px', marginBottom: 'var(--space-md)' }}>Parameters</h2>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)', flex: 1 }}>
           <MathInput
             label="Function f(x)"
             value={latexFunc}
@@ -301,7 +310,7 @@ export default function IntegrationWidget2D() {
           </div>
         </div>
 
-        {/* TODO: Add your numerical results here */}
+        {/* Results Area */}
         <div style={{ marginTop: 'var(--space-xl)' }}>
           <h2 style={{ fontSize: '18px', marginBottom: 'var(--space-md)' }}>Results</h2>
           <div style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
@@ -312,7 +321,13 @@ export default function IntegrationWidget2D() {
       </div>
 
       {/* --- RESULTS PANEL (Desmos Graph) --- */}
-      <div>
+      <div style={{ 
+        borderRadius: 'var(--radius-lg)', 
+        overflow: 'hidden',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+        border: '1px solid var(--color-border)',
+        height: '100%'
+      }}>
         <DesmosGraph expressions={desmosExpressions} style={{ height: '500px' }} />
       </div>
 
