@@ -271,11 +271,11 @@ const Graph3D = forwardRef<Graph3DHandle, Graph3DProps>(({ expressions, classNam
 
       const exporter = new STLExporter();
       // Binary STL is much more robust for complex models with many prisms
-      const stlData = exporter.parse(group, { binary: true });
+      const stlData = exporter.parse(group, { binary: true }) as DataView;
       
       group.visible = wasVisible;
 
-      const blob = new Blob([stlData], { type: 'application/octet-stream' });
+      const blob = new Blob([stlData.buffer], { type: 'application/octet-stream' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
