@@ -262,12 +262,14 @@ const Graph3D = forwardRef<Graph3DHandle, Graph3DProps>(({ expressions, classNam
         <SmoothGrid range={range} />
 
         <group ref={exportGroupRef}>
-          {expressions.map((expr) => (
-            expr.meshStyle === 'PRISM'
-              ? <ApproxPrisms key={expr.id} {...expr} range={range} />
-              : <ComputeGraphMesh key={expr.id} id={expr.id} latex={expr.latex} color={expr.color} range={range} />
+          {expressions.filter(e => e.meshStyle === 'PRISM').map((expr) => (
+            <ApproxPrisms key={expr.id} {...expr} range={range} />
           ))}
         </group>
+
+        {expressions.filter(e => e.meshStyle !== 'PRISM').map((expr) => (
+          <ComputeGraphMesh key={expr.id} id={expr.id} latex={expr.latex} color={expr.color} range={range} />
+        ))}
 
         <SmoothRange targetRange={targetRange} onRangeUpdate={setRange} />
         <ZoomHandler onZoom={handleZoom} />
