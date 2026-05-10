@@ -152,13 +152,19 @@ export default function IntegrationWidget3D() {
   }, [latexFunc, asciiFunc, lowerBoundX, upperBoundX, lowerBoundY, upperBoundY]);
 
   return (
-    <div className="responsive-grid" style={{ alignItems: 'stretch' }}>
+    <div className="responsive-grid" style={{ alignItems: 'flex-start', paddingBottom: 'var(--space-2xl)' }}>
 
       {/* --- INPUT PANEL --- */}
-      <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-lg)', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ 
+        background: 'var(--color-surface)', 
+        border: '1px solid var(--color-border)', 
+        borderRadius: 'var(--radius-lg)', 
+        padding: 'var(--space-lg)',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+      }}>
         <h2 style={{ fontSize: '18px', marginBottom: 'var(--space-md)' }}>Parameters</h2>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)', flex: 1 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
           <MathInput
             label="Function f(x, y)"
             value={latexFunc}
@@ -277,7 +283,13 @@ export default function IntegrationWidget3D() {
       </div>
 
       {/* --- RESULTS PANEL (Desmos Graph) --- */}
-      <div style={{ position: 'relative', height: '100%' }}>
+      <div style={{ 
+        position: 'relative', 
+        borderRadius: 'var(--radius-lg)', 
+        overflow: 'hidden',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+        border: '1px solid var(--color-border)'
+      }}>
         <button
           onClick={() => graphRef.current?.exportSTL()}
           style={{
@@ -286,16 +298,20 @@ export default function IntegrationWidget3D() {
             right: '16px',
             zIndex: 10, /* ensures it sits on top of canvas */
             padding: '8px 16px',
-            background: 'var(--color-surface)',
-            border: '1px solid var(--color-border)',
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
             borderRadius: '8px',
             color: 'white',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            fontWeight: '500'
           }}
+          className="hover-bright"
         >
           Download STL
         </button>
-        <Graph3D ref={graphRef} expressions={graphExpressions} style={{ height: '600px' }} />
+        <Graph3D ref={graphRef} expressions={graphExpressions} style={{ height: '500px', border: 'none' }} />
       </div>
 
     </div>);
