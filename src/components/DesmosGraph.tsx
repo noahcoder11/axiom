@@ -70,7 +70,8 @@ export default function DesmosGraph({
         settingsMenu: false,   // Hide settings wrench
         zoomButtons: true,     // Keep zoom controls
         expressionsTopbar: false,
-        lockViewport: false
+        lockViewport: false,
+        invertedColors: true   // Matches the dark theme of Axiom
       });
     }
 
@@ -93,8 +94,19 @@ export default function DesmosGraph({
       calculatorRef.current.removeExpressions(currentExpressions.map((e: any) => ({ id: e.id })));
     }
 
+    // Pre-invert hex colors to counteract Desmos's internal invertedColors calculation
+    const processedExpressions = expressions.map(expr => {
+      if (expr.color) {
+        return {
+          ...expr,
+          color: invertHexColor(expr.color)
+        };
+      }
+      return expr;
+    });
+
     // Then set the new expressions
-    calculatorRef.current.setExpressions(expressions);
+    calculatorRef.current.setExpressions(processedExpressions);
   }, [expressions, isReady]);
 
   return (
@@ -118,4 +130,27 @@ export default function DesmosGraph({
       )}
     </div>
   );
+}
+
+function invertHexColor(hex: string): string {
+  if (!hex || !hex.startsWith('#')) return hex;
+  let cleanHex = hex.replace('#', '');
+  
+  if (cleanHex.length === 3) {
+    cleanHex = cleanHex.split('').map(char => char + char).join('');
+  }
+  
+  if (cleanHex.length !== 6) {
+    return hex;
+  }
+  
+  const r = parseInt(cleanHex.substring(0, 2), 16);
+  const g = parseInt(cleanHex.substring(2, 4), 16);
+  const b = parseInt(cleanHex.substring(4, 6), 16);
+  
+  const invertedR = (255 - r).toString(16).padStart(2, '0');
+  const invertedG = (255 - g).toString(16).padStart(2, '0');
+  const invertedB = (255 - b).toString(16).padStart(2, '0');
+  
+  return `#${invertedR}${invertedG}${invertedB}`;
 }

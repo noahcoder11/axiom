@@ -180,3 +180,24 @@ img, svg {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- Results Cards ---- */
+.results-card-riemann {
+  transition: all var(--transition-base);
+}
+.results-card-riemann:hover {
+  background: rgba(232, 121, 249, 0.06) !important;
+  border-color: rgba(232, 121, 249, 0.3) !important;
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 15px rgba(232, 121, 249, 0.06);
+}
+
+.results-card-exact {
+  transition: all var(--transition-base);
+}
+.results-card-exact:hover {
+  background: rgba(124, 111, 255, 0.06) !important;
+  border-color: rgba(124, 111, 255, 0.3) !important;
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 15px rgba(124, 111, 255, 0.06);
+}

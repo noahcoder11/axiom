@@ -1,20 +1,23 @@
-import { useEffect, useRef, useState, useCallback, useMemo, useLayoutEffect, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo, useLayoutEffect } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Edges } from '@react-three/drei';
 import * as THREE from 'three';
 import * as math from 'mathjs';
-import { STLExporter } from 'three-stdlib';
 
 export interface Graph3DExpression {
   id: string;
   latex?: string;
   color?: string;
-  meshStyle?: 'SURFACE' | 'WIREFRAME' | 'SOLID' | 'PRISM';
+  meshStyle?: 'SURFACE' | 'WIREFRAME' | 'SOLID';
   prismData?: { x: number; y: number; height: number }[];
   dx?: number;
   dy?: number;
   hidden?: boolean;
   fillOpacity?: number;
+  xMin?: number;
+  xMax?: number;
+  yMin?: number;
+  yMax?: number;
   [key: string]: any;
 }
 
@@ -28,7 +31,7 @@ interface Graph3DProps {
 const GRID_SIZE = 20;       // Fixed visual size of the plane/grid
 const GRID_SEGMENTS = 50;   // Vertex density
 
-function ComputeGraphMesh({ latex, color = '#7c6fff', range, thickness = 0.5, isExport = false }: Graph3DExpression & { range: number, thickness?: number, isExport?: boolean }) {
+function ComputeGraphMesh({ latex, color = '#7c6fff', range, xMin, xMax, yMin, yMax }: Graph3DExpression & { range: number }) {
   const geometryRef = useRef<THREE.BoxGeometry>(null);
   const vertexSides = useRef<Int8Array | null>(null);
 
@@ -43,6 +46,64 @@ function ComputeGraphMesh({ latex, color = '#7c6fff', range, thickness = 0.5, is
     }
   }, [latex]);
 
+  const boundsInfo = useMemo(() => {
+    const halfGrid = GRID_SIZE / 2;
+    const scale = halfGrid / range;
+
+    const hasBounds = 
+      xMin !== undefined && 
+      xMax !== undefined && 
+      yMin !== undefined && 
+      yMax !== undefined &&
+      !isNaN(xMin) && !isNaN(xMax) && !isNaN(yMin) && !isNaN(yMax);
+
+    if (hasBounds) {
+      const dxMath = xMax - xMin;
+      const dyMath = yMax - yMin;
+
+      // Extend the surface by 10% past the rectangles
+      const extensionX = dxMath * 0.1;
+      const extensionY = dyMath * 0.1;
+
+      const surfXMin = xMin - extensionX;
+      const surfXMax = xMax + extensionX;
+      const surfYMin = yMin - extensionY;
+      const surfYMax = yMax + extensionY;
+
+      const vWidth = (surfXMax - surfXMin) * scale;
+      const vLength = (surfYMax - surfYMin) * scale;
+
+      const vCenterX = ((xMin + xMax) / 2) * scale;
+      const vCenterY = ((yMin + yMax) / 2) * scale;
+
+      return {
+        hasBounds: true,
+        surfXMin,
+        surfXMax,
+        surfYMin,
+        surfYMax,
+        vWidth,
+        vLength,
+        vCenterX,
+        vCenterY,
+        scale
+      };
+    }
+
+    return {
+      hasBounds: false,
+      surfXMin: -range,
+      surfXMax: range,
+      surfYMin: -range,
+      surfYMax: range,
+      vWidth: GRID_SIZE,
+      vLength: GRID_SIZE,
+      vCenterX: 0,
+      vCenterY: 0,
+      scale
+    };
+  }, [range, xMin, xMax, yMin, yMax]);
+
   useLayoutEffect(() => {
     if (!geometryRef.current || !compiledFunc) return;
 
@@ -51,48 +112,40 @@ function ComputeGraphMesh({ latex, color = '#7c6fff', range, thickness = 0.5, is
       const positions = attr.array as Float32Array;
 
       // Initialize vertex sides if not already done
-      if (!vertexSides.current) {
+      if (!vertexSides.current || vertexSides.current.length !== positions.length / 3) {
         vertexSides.current = new Int8Array(positions.length / 3);
         for (let i = 0; i < positions.length; i += 3) {
-          // BoxGeometry depth is 1, so Z is initially -0.5 or 0.5
           vertexSides.current[i / 3] = positions[i + 2] > 0 ? 1 : -1;
         }
       }
 
+      const { surfXMin, surfXMax, surfYMin, surfYMax, vWidth, vLength, scale } = boundsInfo;
+
       for (let i = 0; i < positions.length; i += 3) {
-        // Initial positions for BoxGeometry are -GRID_SIZE/2 to GRID_SIZE/2
-        const xPos = positions[i];
-        const yPos = positions[i + 1];
+        const px = positions[i];
+        const py = positions[i + 1];
         const side = vertexSides.current[i / 3];
 
-        // Map initial visual position (-10..10) to math coordinate (-range..range)
-        // Note: GRID_SIZE is 20, so halfGrid is 10.
-        const halfGrid = GRID_SIZE / 2;
-        const x = (xPos / halfGrid) * range;
-        const y = (yPos / halfGrid) * range;
+        const tX = (px + vWidth / 2) / vWidth;
+        const tY = (vLength / 2 - py) / vLength;
+        const x = surfXMin + tX * (surfXMax - surfXMin);
+        const y = surfYMin + tY * (surfYMax - surfYMin);
 
         // Evaluate and scale Z back to visual space
         let z = 0;
         try {
           z = compiledFunc.evaluate({ x, y });
+          if (isNaN(z) || !isFinite(z)) z = 0;
         } catch (e) {
           z = 0;
         }
 
-        // In export mode, visualScale is 'range', so visualZ is just 'z'.
-        // This makes 1 math unit = 1 unit in the STL.
-        const visualZ = isExport ? z : (z / range) * halfGrid;
+        const visualZ = z * scale;
 
         if (side > 0) {
-          positions[i + 2] = visualZ + thickness;
+          positions[i + 2] = visualZ;
         } else {
           positions[i + 2] = visualZ;
-        }
-
-        // If exporting, we also need to adjust X and Y to be 1:1 with math units
-        if (isExport) {
-          positions[i] = x;
-          positions[i + 1] = y;
         }
       }
 
@@ -101,18 +154,16 @@ function ComputeGraphMesh({ latex, color = '#7c6fff', range, thickness = 0.5, is
     } catch (e) {
       console.error("Mesh calculation error:", e);
     }
-  }, [compiledFunc, range, thickness, isExport])
+  }, [compiledFunc, boundsInfo]);
+
+  const { vWidth, vLength, vCenterX, vCenterY } = boundsInfo;
 
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]}>
-      <boxGeometry ref={geometryRef} args={[GRID_SIZE, GRID_SIZE, 1, GRID_SEGMENTS, GRID_SEGMENTS, 1]} />
-      {isExport ? (
-        <meshBasicMaterial color="#ffffff" />
-      ) : (
-        <meshStandardMaterial color={color} side={THREE.DoubleSide} />
-      )}
+    <mesh position={[vCenterX, 0, vCenterY]} rotation={[-Math.PI / 2, 0, 0]}>
+      <boxGeometry ref={geometryRef} args={[vWidth, vLength, 1, GRID_SEGMENTS, GRID_SEGMENTS, 1]} />
+      <meshStandardMaterial color={color} side={THREE.DoubleSide} />
     </mesh>
-  )
+  );
 }
 function ApproxPrisms({ prismData = [], dx = 1, dy = 1, color = '#e879f9', range = 10 }: Graph3DExpression & { range: number }) {
   const halfGrid = GRID_SIZE / 2;
@@ -257,42 +308,9 @@ function SmoothGrid({ range }: { range: number }) {
   );
 }
 
-export interface Graph3DHandle {
-  exportSTL: () => void;
-}
-
-const Graph3D = forwardRef<Graph3DHandle, Graph3DProps>(({ expressions, className = '', style }, ref) => {
+export default function Graph3D({ expressions, className = '', style }: Graph3DProps) {
   const [targetRange, setTargetRange] = useState(10);
   const [range, setRange] = useState(10);
-  const exportGroupRef = useRef<THREE.Group>(null);
-
-  useImperativeHandle(ref, () => ({
-    exportSTL: () => {
-      if (!exportGroupRef.current) return;
-
-      const group = exportGroupRef.current;
-      const wasVisible = group.visible;
-      group.visible = true;
-
-      // Crucial: Update matrices for all nested children
-      group.updateMatrixWorld(true);
-
-      const exporter = new STLExporter();
-      // Binary STL is much more robust for complex models with many prisms
-      const stlData = exporter.parse(group, { binary: true }) as DataView;
-
-      group.visible = wasVisible;
-
-      // Use the buffer directly, cast to any to bypass strict ArrayBufferLike vs BlobPart checks in some TS versions
-      const blob = new Blob([stlData.buffer as any], { type: 'application/octet-stream' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'approximation.stl';
-      link.click();
-      URL.revokeObjectURL(url);
-    }
-  }));
 
   const handleZoom = useCallback((delta: number) => {
     setTargetRange(prev => {
@@ -325,38 +343,20 @@ const Graph3D = forwardRef<Graph3DHandle, Graph3DProps>(({ expressions, classNam
         {/* VISUAL MESHES (With materials and Edges) */}
         <group>
           {expressions.map((expr) => (
-            expr.meshStyle === 'PRISM'
+            expr.meshStyle === 'SOLID'
               ? <ApproxPrisms key={`vis-${expr.id}`} {...expr} range={range} />
-              : <ComputeGraphMesh key={`vis-${expr.id}-${expr.latex}`} id={expr.id} latex={expr.latex} color={expr.color} range={range} thickness={0.5} />
+              : <ComputeGraphMesh 
+                  key={`vis-${expr.id}-${expr.latex}`} 
+                  id={expr.id} 
+                  latex={expr.latex} 
+                  color={expr.color} 
+                  range={range} 
+                  xMin={expr.xMin}
+                  xMax={expr.xMax}
+                  yMin={expr.yMin}
+                  yMax={expr.yMax}
+                />
           ))}
-        </group>
-
-        {/* INVISIBLE EXPORT MESHES (Clean geometry only, no edges, no transparent materials) */}
-        <group ref={exportGroupRef} visible={false}>
-          {expressions.map((expr) => {
-            if (expr.meshStyle === 'PRISM') {
-              // 1:1 Scale for export: 1 math unit = 1mm (1 visual unit)
-              return (
-                <group key={`exp-${expr.id}`}>
-                  {(expr.prismData || []).map((p, i) => {
-                    const vx = p.x;
-                    const vy = p.y;
-                    const vh = p.height;
-                    const vdx = (expr.dx || 1);
-                    const vdy = (expr.dy || 1);
-                    return (
-                      <mesh key={`exp-prism-${i}`} position={[vx, vh / 2, vy]} scale={[vdx, vdy, Math.abs(vh)]} rotation={[-Math.PI / 2, 0, 0]}>
-                        <boxGeometry args={[1, 1, 1]} />
-                        <meshBasicMaterial color="#ffffff" />
-                      </mesh>
-                    );
-                  })}
-                </group>
-              );
-            } else {
-              return <ComputeGraphMesh key={`exp-${expr.id}-${expr.latex}`} id={expr.id} latex={expr.latex} color="#ffffff" range={range} thickness={1.0} isExport={true} />;
-            }
-          })}
         </group>
 
         <SmoothRange targetRange={targetRange} onRangeUpdate={setRange} />
@@ -365,6 +365,4 @@ const Graph3D = forwardRef<Graph3DHandle, Graph3DProps>(({ expressions, classNam
       </Canvas>
     </div>
   );
-});
-
-export default Graph3D;
+}

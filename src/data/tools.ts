@@ -39,7 +39,6 @@ const tools: Tool[] = [
     icon: '🔄',
     tags: ['Calculus', 'Math'],
     path: '/axiom/volume-rotation',
-    wip: true,
   },
   {
     id: 'graph-traversal',

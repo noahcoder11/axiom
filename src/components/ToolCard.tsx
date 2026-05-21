@@ -41,9 +41,9 @@ export default function ToolCard({ tool, index }: ToolCardProps) {
           {tool.wip && (
             <span
               className="tag tag--stats"
-              style={{ marginLeft: 8, fontSize: 10, verticalAlign: 'middle' }}
+              style={{ marginLeft: 8, fontSize: 9, verticalAlign: 'middle', letterSpacing: '0.05em', fontFamily: 'var(--font-mono)' }}
             >
-              soon
+              STAGING
             </span>
           )}
         </div>
