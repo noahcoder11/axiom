@@ -25,7 +25,7 @@ export default function MathInput({ value, onChange, placeholder: _placeholder =
     const handleInput = (e: Event) => {
       const target = e.target as MathfieldElement;
       const latex = target.getValue('latex');
-      
+
       let mathjsStr = latex;
 
       // Step 1: Normalize shorthand \frac forms to braced form
@@ -39,7 +39,7 @@ export default function MathInput({ value, onChange, placeholder: _placeholder =
         let i = startIndex;
         while (i < str.length && str[i] === ' ') i++;
         if (i >= str.length || str[i] !== '{') return null;
-        
+
         let braceCount = 1;
         let j = i + 1;
         while (j < str.length && braceCount > 0) {
@@ -56,7 +56,7 @@ export default function MathInput({ value, onChange, placeholder: _placeholder =
       const processLatex = (str: string): string => {
         let result = '';
         let i = 0;
-        
+
         while (i < str.length) {
           if (str.startsWith('\\frac', i)) {
             let numResult = extractBraced(str, i + 5);
@@ -109,12 +109,16 @@ export default function MathInput({ value, onChange, placeholder: _placeholder =
 
       // Step 3: Clean up remaining LaTeX commands to mathjs-compatible syntax
       mathjsStr = mathjsStr
+        .replace(/\\ln/g, 'log')
+        .replace(/\\log(?!_)/g, 'log10')
         .replace(/\\cdot/g, '*')
         .replace(/\\times/g, '*')
         .replace(/\\left\(/g, '(')
         .replace(/\\right\)/g, ')')
         .replace(/\\left\|/g, 'abs(')
         .replace(/\\right\|/g, ')')
+        .replace(/\\log_\(([^)]+)\)\(([^)]+)\)/g, 'log($2, $1)')
+        .replace(/\\log_\(([^)]+)\)\s*([a-zA-Z0-9]+)/g, 'log($2, $1)')
         .replace(/\\([a-zA-Z]+)/g, '$1')
         .replace(/[{}]/g, ''); // Strip remaining single braces
 
