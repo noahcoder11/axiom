@@ -135,7 +135,7 @@ export default function MathInput({ value, onChange, placeholder: _placeholder =
     mf.style.color = 'var(--color-text)';
     mf.style.fontSize = '1.1rem';
     mf.style.padding = '0';
-    mf.style.minWidth = '200px';
+    mf.style.minWidth = '0'; // Allow it to shrink in flex containers
 
     return () => {
       mf.removeEventListener('input', handleInput);
