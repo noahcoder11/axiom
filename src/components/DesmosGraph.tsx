@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useTheme } from './ThemeProvider';
 
 declare global {
   interface Window {
@@ -32,6 +33,7 @@ export default function DesmosGraph({
   const containerRef = useRef<HTMLDivElement>(null);
   const calculatorRef = useRef<any>(null);
   const [isReady, setIsReady] = useState(false);
+  const { resolvedTheme } = useTheme();
 
   // 1. Load the Desmos script
   useEffect(() => {
@@ -71,7 +73,7 @@ export default function DesmosGraph({
         zoomButtons: true,     // Keep zoom controls
         expressionsTopbar: false,
         lockViewport: false,
-        invertedColors: true   // Matches the dark theme of Axiom
+        invertedColors: resolvedTheme === 'dark'
       });
     }
 
@@ -81,33 +83,47 @@ export default function DesmosGraph({
         calculatorRef.current = null;
       }
     };
-  }, [isReady]);
+  }, [isReady]); // intentionally don't include resolvedTheme here to avoid recreating
+
+  // 2.5 Update Settings on Theme Change
+  useEffect(() => {
+    if (isReady && calculatorRef.current) {
+      calculatorRef.current.updateSettings({
+        invertedColors: resolvedTheme === 'dark'
+      });
+    }
+  }, [resolvedTheme, isReady]);
 
   // 3. Sync Expressions
   useEffect(() => {
     if (!calculatorRef.current || !expressions) return;
 
-    // First, remove any existing expressions that are currently on the graph
-    // to prevent orphaned shapes (e.g. if intervals went from 10 to 5)
-    const currentExpressions = calculatorRef.current.getExpressions();
-    if (currentExpressions.length > 0) {
-      calculatorRef.current.removeExpressions(currentExpressions.map((e: any) => ({ id: e.id })));
-    }
-
-    // Pre-invert hex colors to counteract Desmos's internal invertedColors calculation
+    // Pre-invert hex colors to counteract Desmos's internal invertedColors calculation (only in dark mode)
     const processedExpressions = expressions.map(expr => {
       if (expr.color) {
         return {
           ...expr,
-          color: invertHexColor(expr.color)
+          color: resolvedTheme === 'dark' ? invertHexColor(expr.color) : expr.color
         };
       }
       return expr;
     });
 
-    // Then set the new expressions
+    // Sync with Desmos. Note: Desmos automatically handles updates if IDs match.
+    // However, if the user reduces the number of intervals, we need to remove the orphaned expressions.
+    // We can do this by first getting all current expression IDs.
+    const currentExprs = calculatorRef.current.getExpressions();
+    const newIds = new Set(processedExpressions.map(e => e.id));
+    const idsToRemove = currentExprs
+      .filter((e: any) => !newIds.has(e.id))
+      .map((e: any) => e.id);
+
+    if (idsToRemove.length > 0) {
+      calculatorRef.current.removeExpressions(idsToRemove.map((id: string) => ({ id })));
+    }
+
     calculatorRef.current.setExpressions(processedExpressions);
-  }, [expressions, isReady]);
+  }, [expressions, isReady, resolvedTheme]);
 
   return (
     <div

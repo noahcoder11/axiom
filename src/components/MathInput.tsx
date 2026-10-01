@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import 'mathlive';
 import type { MathfieldElement } from 'mathlive';
+import { ComputeEngine } from '@cortex-js/compute-engine';
 
 interface MathInputProps {
   value: string;
@@ -28,100 +29,19 @@ export default function MathInput({ value, onChange, placeholder: _placeholder =
 
       let mathjsStr = latex;
 
-      // Step 1: Normalize shorthand \frac forms to braced form
-      // \frac12 -> \frac{1}{2}, \frac1{2x} -> \frac{1}{2x}, \frac{1}2 -> \frac{1}{2}
-      mathjsStr = mathjsStr.replace(/\\frac(?!{)(.)(.)/g, '\\frac{$1}{$2}');
-      mathjsStr = mathjsStr.replace(/\\frac{([^{}]*)}(?!{)(.)/g, '\\frac{$1}{$2}');
-      mathjsStr = mathjsStr.replace(/\\frac(?!{)(.)({[^{}]*})/g, '\\frac{$1}$2');
+      try {
+        const ce = new ComputeEngine();
+        const expr = ce.parse(latex);
+        mathjsStr = expr.toString();
 
-      // Step 2: Process commands with nested braces (\frac, \sqrt, ^{}, _{})
-      const extractBraced = (str: string, startIndex: number): { content: string, nextIndex: number } | null => {
-        let i = startIndex;
-        while (i < str.length && str[i] === ' ') i++;
-        if (i >= str.length || str[i] !== '{') return null;
-
-        let braceCount = 1;
-        let j = i + 1;
-        while (j < str.length && braceCount > 0) {
-          if (str[j] === '{') braceCount++;
-          else if (str[j] === '}') braceCount--;
-          j++;
-        }
-        if (braceCount === 0) {
-          return { content: str.slice(i + 1, j - 1), nextIndex: j };
-        }
-        return null;
-      };
-
-      const processLatex = (str: string): string => {
-        let result = '';
-        let i = 0;
-
-        while (i < str.length) {
-          if (str.startsWith('\\frac', i)) {
-            let numResult = extractBraced(str, i + 5);
-            if (numResult) {
-              let denResult = extractBraced(str, numResult.nextIndex);
-              if (denResult) {
-                result += `((${processLatex(numResult.content)})/(${processLatex(denResult.content)}))`;
-                i = denResult.nextIndex;
-                continue;
-              }
-            }
-            result += '\\frac';
-            i += 5;
-          } else if (str.startsWith('\\sqrt', i)) {
-            let radResult = extractBraced(str, i + 5);
-            if (radResult) {
-              result += `sqrt(${processLatex(radResult.content)})`;
-              i = radResult.nextIndex;
-              continue;
-            }
-            result += '\\sqrt';
-            i += 5;
-          } else if (str.startsWith('^{', i)) {
-            let expResult = extractBraced(str, i + 1);
-            if (expResult) {
-              result += `^(${processLatex(expResult.content)})`;
-              i = expResult.nextIndex;
-              continue;
-            }
-            result += '^';
-            i += 1;
-          } else if (str.startsWith('_{', i)) {
-            let subResult = extractBraced(str, i + 1);
-            if (subResult) {
-              result += `_(${processLatex(subResult.content)})`;
-              i = subResult.nextIndex;
-              continue;
-            }
-            result += '_';
-            i += 1;
-          } else {
-            result += str[i];
-            i++;
-          }
-        }
-        return result;
-      };
-
-      mathjsStr = processLatex(mathjsStr);
-
-      // Step 3: Clean up remaining LaTeX commands to mathjs-compatible syntax
-      mathjsStr = mathjsStr
-        .replace(/\\ln/g, 'log')
-        .replace(/\\log(?!_)/g, 'log10')
-        .replace(/\\cdot/g, '*')
-        .replace(/\\times/g, '*')
-        .replace(/\\left\(/g, '(')
-        .replace(/\\right\)/g, ')')
-        .replace(/\\left\|/g, 'abs(')
-        .replace(/\\right\|/g, ')')
-        .replace(/\\log_\(([^)]+)\)\(([^)]+)\)/g, 'log($2, $1)')
-        .replace(/\\log_\(([^)]+)\)\s*([a-zA-Z0-9]+)/g, 'log($2, $1)')
-        .replace(/\\([a-zA-Z]+)/g, '$1')
-        .replace(/[{}]/g, ''); // Strip remaining single braces
-
+        // Convert ComputeEngine string syntax to mathjs-compatible syntax where they differ
+        mathjsStr = mathjsStr
+          .replace(/\bln\(/g, 'log(')
+          .replace(/\blog\(([^,]+)\)/g, 'log10($1)')
+          .replace(/\|([^|]+)\|/g, 'abs($1)');
+      } catch (err) {
+        console.warn('ComputeEngine failed to parse LaTeX:', err);
+      }
       onChange?.(latex, mathjsStr);
     };
 

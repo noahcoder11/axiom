@@ -55,8 +55,8 @@ export default function IntegrationWidget3D() {
           const bx = Number(upperBoundX);
           const ay = Number(lowerBoundY);
           const by = Number(upperBoundY);
-          const nx = Number(intervalsX);
-          const ny = Number(intervalsY);
+          const nx = Math.min(50, Math.max(1, Math.round(Number(intervalsX))));
+          const ny = Math.min(50, Math.max(1, Math.round(Number(intervalsY))));
           const dx = (bx - ax) / nx;
           const dy = (by - ay) / ny;
           const prisms: { x: number; y: number; height: number }[] = [];
@@ -113,13 +113,14 @@ export default function IntegrationWidget3D() {
         const b = Number(upperBoundX);
         const c = Number(lowerBoundY);
         const d = Number(upperBoundY);
-        const n = Number(intervalsX);
-        const m = Number(intervalsY);
+        const n = Math.max(1, Math.round(Number(intervalsX)));
+        const m = Math.max(1, Math.round(Number(intervalsY)));
         const dx = (b - a) / n;
         const dy = (d - c) / m;
 
-        let sum = 0;
+        if (isNaN(a) || isNaN(b) || isNaN(c) || isNaN(d) || isNaN(n) || isNaN(m)) return undefined;
 
+        let sum = 0;
         for (let i = 0; i < n; i++) {
           for (let j = 0; j < m; j++) {
             let evalX = a + (i + 0.5) * dx;
@@ -191,6 +192,43 @@ export default function IntegrationWidget3D() {
     }
     return undefined;
   }, [latexFunc, asciiFunc, lowerBoundX, upperBoundX, lowerBoundY, upperBoundY]);
+
+  // Global bound tracking logic for potential surface alignment
+  useMemo(() => {
+    let min = 0; let max = 0; let hasData = false;
+    if (asciiFunc) {
+      try {
+        const compiled = math.compile(asciiFunc);
+        const res = 40;
+        const xMinVal = Number(lowerBoundX);
+        const xMaxVal = Number(upperBoundX);
+        const yMinVal = Number(lowerBoundY);
+        const yMaxVal = Number(upperBoundY);
+        
+        if (!isNaN(xMinVal) && !isNaN(xMaxVal) && !isNaN(yMinVal) && !isNaN(yMaxVal)) {
+          for (let i = 0; i <= res; i++) {
+            const x = xMinVal + (i / res) * (xMaxVal - xMinVal);
+            for (let j = 0; j <= res; j++) {
+              const y = yMinVal + (j / res) * (yMaxVal - yMinVal);
+              try {
+                const z = compiled.evaluate({ x, y });
+                if (!isNaN(z) && isFinite(z)) {
+                  if (!hasData) {
+                    min = z;
+                    max = z;
+                    hasData = true;
+                  } else {
+                    min = Math.min(min, z);
+                    max = Math.max(max, z);
+                  }
+                }
+              } catch (e) { }
+            }
+          }
+        }
+      } catch (e) { }
+    }
+  }, [asciiFunc, lowerBoundX, upperBoundX, lowerBoundY, upperBoundY]);
 
   const errorVal = useMemo(() => {
     if (approximation !== undefined && exactResult !== undefined && exactResult !== 0) {

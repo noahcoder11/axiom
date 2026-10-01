@@ -3,7 +3,7 @@ import MathInput from './MathInput';
 import Latex from './Latex';
 import Graph3D from './Graph3D';
 import type { Graph3DExpression } from './Graph3D';
-import PrintSettingsModal from './PrintSettingsModal';
+import VolumePrintSettingsModal from './VolumePrintSettingsModal';
 import * as math from 'mathjs';
 
 // Inline Icons for better reliability
@@ -44,8 +44,26 @@ export default function VolumeRotationWidget() {
     const lowerBound = useMemo(() => { try { const val = math.evaluate(lowerBoundAscii); return typeof val === 'number' && !isNaN(val) ? val : 0; } catch { return 0; } }, [lowerBoundAscii]);
     const upperBound = useMemo(() => { try { const val = math.evaluate(upperBoundAscii); return typeof val === 'number' && !isNaN(val) ? val : 4; } catch { return 4; } }, [upperBoundAscii]);
 
-    const [axis, setAxis] = useState<'x' | 'y'>('x');
-    const [method, setMethod] = useState<'disk' | 'shell'>('disk');
+    const [axisString, setAxisString] = useState('y=0');
+    
+    const parsedAxis = useMemo(() => {
+        const str = axisString.replace(/\s+/g, '').toLowerCase();
+        let type: 'horizontal' | 'vertical' = 'horizontal';
+        let value = 0;
+        if (str.startsWith('x=')) {
+            type = 'vertical';
+            try { value = math.evaluate(str.substring(2)); } catch { value = 0; }
+        } else {
+            type = 'horizontal';
+            try { 
+                const expr = str.startsWith('y=') ? str.substring(2) : str;
+                value = math.evaluate(expr); 
+            } catch { value = 0; }
+        }
+        return { type, value };
+    }, [axisString]);
+    
+    const method = parsedAxis.type === 'horizontal' ? 'disk' : 'shell';
     const [divisions, setDivisions] = useState(12);
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
     const [showApproximation, setShowApproximation] = useState(true);
@@ -76,18 +94,23 @@ export default function VolumeRotationWidget() {
                         if (isNaN(yInner) || !isFinite(yInner)) yInner = 0;
                     } catch (e) { }
 
-                    if (axis === 'x') {
-                        if (method === 'disk') {
-                            sum += (Math.pow(yOuter, 2) - Math.pow(yInner, 2)) * dx;
-                        } else {
-                            sum += 2 * x * Math.abs(yOuter - yInner) * dx;
-                        }
+                    let R_outer = yOuter - parsedAxis.value;
+                    let R_inner = yInner - parsedAxis.value;
+                    
+                    if (Math.abs(R_inner) > Math.abs(R_outer)) {
+                        const temp = R_outer;
+                        R_outer = R_inner;
+                        R_inner = temp;
+                    }
+
+                    if (parsedAxis.type === 'horizontal') {
+                        // Disk/Washer method
+                        sum += (Math.pow(R_outer, 2) - Math.pow(R_inner, 2)) * dx;
                     } else {
-                        if (method === 'shell') {
-                            sum += 2 * x * Math.abs(yOuter - yInner) * dx;
-                        } else {
-                            sum += (Math.pow(yOuter, 2) - Math.pow(yInner, 2)) * dx;
-                        }
+                        // Shell method
+                        const radius = Math.abs(x - parsedAxis.value);
+                        const height = Math.abs(yOuter - yInner);
+                        sum += 2 * radius * height * dx;
                     }
                 }
 
@@ -96,7 +119,7 @@ export default function VolumeRotationWidget() {
             } catch (e) { }
         }
         return 0;
-    }, [asciiFunc, asciiFuncInner, lowerBound, upperBound, method, axis]);
+    }, [asciiFunc, asciiFuncInner, lowerBound, upperBound, parsedAxis]);
 
     const graphExpressions = useMemo<Graph3DExpression[]>(() => {
         const exprs: Graph3DExpression[] = [];
@@ -111,12 +134,12 @@ export default function VolumeRotationWidget() {
                 xMax: upperBound,
                 slices: divisions,
                 method: method,
-                axis: axis,
+                parsedAxis: parsedAxis,
                 showApproximation: showApproximation
             });
         }
         return exprs;
-    }, [asciiFunc, asciiFuncInner, lowerBound, upperBound, divisions, method, axis, showApproximation]);
+    }, [asciiFunc, asciiFuncInner, lowerBound, upperBound, divisions, method, parsedAxis, showApproximation]);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)', paddingBottom: 'var(--space-2xl)' }}>
@@ -196,35 +219,21 @@ export default function VolumeRotationWidget() {
 
                         <div>
                             <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--color-text-subtle)' }}>Axis of Rotation</label>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <button
-                                    onClick={() => setAxis('x')}
-                                    className={`filter-chip ${axis === 'x' ? 'filter-chip--active' : ''}`}
-                                    style={{ flex: 1, justifyContent: 'center' }}
-                                >
-                                    X-Axis (y=0)
-                                </button>
-                                <button
-                                    onClick={() => setAxis('y')}
-                                    className={`filter-chip ${axis === 'y' ? 'filter-chip--active' : ''}`}
-                                    style={{ flex: 1, justifyContent: 'center' }}
-                                >
-                                    Y-Axis (x=0)
-                                </button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--color-text-subtle)' }}>Method</label>
-                            <select
-                                value={method}
-                                onChange={(e) => setMethod(e.target.value as 'disk' | 'shell')}
+                            <input
+                                type="text"
+                                value={axisString}
+                                onChange={(e) => setAxisString(e.target.value)}
+                                placeholder="e.g. y = 0, x = 2"
                                 className="search-input"
-                                style={{ paddingLeft: '14px', width: '100%', cursor: 'pointer' }}
-                            >
-                                <option value="disk">Disk/Washer Method</option>
-                                <option value="shell">Cylindrical Shell Method</option>
-                            </select>
+                                style={{ width: '100%', paddingLeft: '14px' }}
+                            />
+                            <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                                {parsedAxis.type === 'horizontal' ? (
+                                    <span>Horizontal axis detected. <strong>Disk/Washer method</strong> automatically selected.</span>
+                                ) : (
+                                    <span>Vertical axis detected. <strong>Cylindrical Shell method</strong> automatically selected.</span>
+                                )}
+                            </div>
                         </div>
 
                         <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '16px', marginTop: '8px' }}>
@@ -298,11 +307,12 @@ export default function VolumeRotationWidget() {
                                 alignItems: 'center',
                                 gap: '8px',
                                 padding: '8px 16px',
-                                background: 'rgba(255, 255, 255, 0.05)',
+                                background: 'var(--bg-primary)',
                                 backdropFilter: 'blur(8px)',
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                border: '1px solid var(--color-border)',
                                 borderRadius: '8px',
-                                color: 'white',
+                                color: 'var(--color-text-primary)',
+                                boxShadow: 'var(--shadow-sm)',
                                 fontSize: '13px',
                                 fontWeight: '600',
                                 cursor: 'pointer'
@@ -361,19 +371,19 @@ export default function VolumeRotationWidget() {
                                 }
                             </span>
                         </div>
-                        <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', margin: 0 }}>The definite integral for rotation around the X-Axis is:</p>
+                        <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', margin: 0 }}>The definite integral evaluated for this volume is:</p>
                         <div style={{ padding: '8px 0', display: 'flex', justifyContent: 'center' }}>
                             {method === 'disk' ? (
                                 innerFunction ? (
-                                    <Latex math="V = \pi \int_{a}^{b} \left( [f(x)]^2 - [g(x)]^2 \right) \, dx" block />
+                                    <Latex math={`V = \\pi \\int_{a}^{b} \\left( [f(x) - ${parsedAxis.value}]^2 - [g(x) - ${parsedAxis.value}]^2 \\right) \\, dx`} block />
                                 ) : (
-                                    <Latex math="V = \pi \int_{a}^{b} [f(x)]^2 \, dx" block />
+                                    <Latex math={`V = \\pi \\int_{a}^{b} [f(x) - ${parsedAxis.value}]^2 \\, dx`} block />
                                 )
                             ) : (
                                 innerFunction ? (
-                                    <Latex math="V = 2\pi \int_{a}^{b} x \cdot (f(x) - g(x)) \, dx" block />
+                                    <Latex math={`V = 2\\pi \\int_{a}^{b} |x - ${parsedAxis.value}| \\cdot (f(x) - g(x)) \\, dx`} block />
                                 ) : (
-                                    <Latex math="V = 2\pi \int_{a}^{b} x \cdot f(x) \, dx" block />
+                                    <Latex math={`V = 2\\pi \\int_{a}^{b} |x - ${parsedAxis.value}| \\cdot f(x) \\, dx`} block />
                                 )
                             )}
                         </div>
@@ -403,17 +413,14 @@ export default function VolumeRotationWidget() {
             </div>
 
             {isPrintModalOpen && (
-                <PrintSettingsModal
+                <VolumePrintSettingsModal
                     isOpen={isPrintModalOpen}
                     onClose={() => setIsPrintModalOpen(false)}
-                    asciiFunc={asciiFunc}
-                    lowerBoundX={String(lowerBound)}
-                    upperBoundX={String(upperBound)}
-                    lowerBoundY={String(-upperBound)}
-                    upperBoundY={String(upperBound)}
-                    intervalsX={String(divisions)}
-                    intervalsY={String(divisions)}
-                    method={method}
+                    latexFunc={asciiFunc}
+                    latexFuncInner={innerFunction ? asciiFuncInner : undefined}
+                    lowerBound={lowerBound}
+                    upperBound={upperBound}
+                    parsedAxis={parsedAxis}
                 />
             )}
         </div>

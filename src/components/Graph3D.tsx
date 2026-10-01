@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState, useCallback, useMemo, useLayoutEffect } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { OrbitControls, Edges } from '@react-three/drei';
+import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import * as math from 'mathjs';
 
 export interface Graph3DExpression {
   id: string;
   latex?: string;
+  latexInner?: string;
   color?: string;
-  meshStyle?: 'SURFACE' | 'WIREFRAME' | 'SOLID';
+  meshStyle?: 'SURFACE' | 'WIREFRAME' | 'SOLID' | 'REVOLUTION';
   prismData?: { x: number; y: number; height: number }[];
   dx?: number;
   dy?: number;
@@ -18,6 +19,9 @@ export interface Graph3DExpression {
   xMax?: number;
   yMin?: number;
   yMax?: number;
+  slices?: number;
+  method?: string;
+  showApproximation?: boolean;
   [key: string]: any;
 }
 
@@ -33,7 +37,6 @@ const GRID_SEGMENTS = 50;   // Vertex density
 
 function ComputeGraphMesh({ latex, color = '#7c6fff', range, xMin, xMax, yMin, yMax }: Graph3DExpression & { range: number }) {
   const geometryRef = useRef<THREE.BoxGeometry>(null);
-  const vertexSides = useRef<Int8Array | null>(null);
 
   // Memoize the compiled function to avoid recompiling on every render
   const compiledFunc = useMemo(() => {
@@ -50,10 +53,10 @@ function ComputeGraphMesh({ latex, color = '#7c6fff', range, xMin, xMax, yMin, y
     const halfGrid = GRID_SIZE / 2;
     const scale = halfGrid / range;
 
-    const hasBounds = 
-      xMin !== undefined && 
-      xMax !== undefined && 
-      yMin !== undefined && 
+    const hasBounds =
+      xMin !== undefined &&
+      xMax !== undefined &&
+      yMin !== undefined &&
       yMax !== undefined &&
       !isNaN(xMin) && !isNaN(xMax) && !isNaN(yMin) && !isNaN(yMax);
 
@@ -111,22 +114,14 @@ function ComputeGraphMesh({ latex, color = '#7c6fff', range, xMin, xMax, yMin, y
       const attr = geometryRef.current.attributes.position;
       const positions = attr.array as Float32Array;
 
-      // Initialize vertex sides if not already done
-      if (!vertexSides.current || vertexSides.current.length !== positions.length / 3) {
-        vertexSides.current = new Int8Array(positions.length / 3);
-        for (let i = 0; i < positions.length; i += 3) {
-          vertexSides.current[i / 3] = positions[i + 2] > 0 ? 1 : -1;
-        }
-      }
-
       const { surfXMin, surfXMax, surfYMin, surfYMax, vWidth, vLength, scale } = boundsInfo;
 
       for (let i = 0; i < positions.length; i += 3) {
         const px = positions[i];
         const py = positions[i + 1];
-        const side = vertexSides.current[i / 3];
 
         const tX = (px + vWidth / 2) / vWidth;
+
         const tY = (vLength / 2 - py) / vLength;
         const x = surfXMin + tX * (surfXMax - surfXMin);
         const y = surfYMin + tY * (surfYMax - surfYMin);
@@ -142,11 +137,7 @@ function ComputeGraphMesh({ latex, color = '#7c6fff', range, xMin, xMax, yMin, y
 
         const visualZ = z * scale;
 
-        if (side > 0) {
-          positions[i + 2] = visualZ;
-        } else {
-          positions[i + 2] = visualZ;
-        }
+        positions[i + 2] = visualZ;
       }
 
       attr.needsUpdate = true;
@@ -165,29 +156,226 @@ function ComputeGraphMesh({ latex, color = '#7c6fff', range, xMin, xMax, yMin, y
     </mesh>
   );
 }
+
 function ApproxPrisms({ prismData = [], dx = 1, dy = 1, color = '#e879f9', range = 10 }: Graph3DExpression & { range: number }) {
   const halfGrid = GRID_SIZE / 2;
   const scale = halfGrid / range; // visual units per math unit
 
-  return (
-    <>
-      {prismData.map((p, i) => {
-        const vx = p.x * scale;
-        const vy = p.y * scale;
-        const vh = p.height * scale;
-        const vdx = dx * scale;
-        const vdy = dy * scale;
+  const instancedMeshRef = useRef<THREE.InstancedMesh>(null);
 
-        return (
-          <mesh key={i} position={[vx, vh / 2, vy]} scale={[vdx, vdy, Math.abs(vh)]} rotation={[-Math.PI / 2, 0, 0]}>
-            <boxGeometry args={[1, 1, 1]} />
-            <meshStandardMaterial color={color} transparent opacity={0.3} />
-            <Edges color={color} />
-          </mesh>
-        );
-      })}
-    </>
+  useLayoutEffect(() => {
+    if (!instancedMeshRef.current) return;
+
+    const dummy = new THREE.Object3D();
+    const count = prismData.length;
+
+    for (let i = 0; i < count; i++) {
+      const p = prismData[i];
+      const vx = p.x * scale;
+      const vy = p.y * scale;
+      const vh = p.height * scale;
+      const vdx = dx * scale;
+      const vdy = dy * scale;
+
+      dummy.position.set(vx, vh / 2, vy);
+      dummy.scale.set(vdx, Math.abs(vh), vdy);
+      dummy.updateMatrix();
+      instancedMeshRef.current.setMatrixAt(i, dummy.matrix);
+    }
+    instancedMeshRef.current.instanceMatrix.needsUpdate = true;
+  }, [prismData, dx, dy, scale]);
+
+  if (prismData.length === 0) return null;
+
+  return (
+    <group>
+      <instancedMesh ref={instancedMeshRef} args={[null as any, null as any, prismData.length]}>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial color={color} transparent opacity={0.3} />
+      </instancedMesh>
+    </group>
   );
+}
+
+function RevolutionMesh({ latex, latexInner, color = '#7c6fff', range, xMin, xMax, slices = 12, method, parsedAxis = { type: 'horizontal', value: 0 }, showApproximation }: Graph3DExpression & { range: number }) {
+  const halfGrid = GRID_SIZE / 2;
+  const scale = halfGrid / range;
+
+  const compiled = useMemo(() => {
+    try { return latex ? math.compile(latex) : null; } catch (e) { return null; }
+  }, [latex]);
+
+  const compiledInner = useMemo(() => {
+    try { return latexInner ? math.compile(latexInner) : null; } catch (e) { return null; }
+  }, [latexInner]);
+
+  const n = Math.max(1, showApproximation ? slices : 64);
+  const a = xMin ?? 0;
+  const b = xMax ?? 4;
+  const dx = (b - a) / n;
+
+  // Generate an array of geometries for the approximation mode
+  const approximationGeometries = useMemo(() => {
+    if (!showApproximation || !compiled) return [];
+    
+    const geoms: { geom: THREE.LatheGeometry, pos: [number, number, number], rot: [number, number, number] }[] = [];
+    
+    for (let i = 0; i < n; i++) {
+      const xStart = a + i * dx;
+      const xEnd = a + (i + 1) * dx;
+      const xMid = (xStart + xEnd) / 2;
+
+      let yOuter = 0;
+      let yInner = 0;
+
+      try {
+        yOuter = compiled.evaluate({ x: xMid });
+        if (compiledInner) yInner = compiledInner.evaluate({ x: xMid });
+      } catch (e) { }
+
+      let radius = yOuter - parsedAxis.value;
+      let radiusInner = yInner - parsedAxis.value;
+
+      if (Math.abs(radiusInner) > Math.abs(radius)) {
+          const temp = radius;
+          radius = radiusInner;
+          radiusInner = temp;
+      }
+      
+      radius = Math.abs(radius);
+      radiusInner = Math.abs(radiusInner);
+
+      const pts: THREE.Vector2[] = [];
+
+      if (parsedAxis.type === 'horizontal') {
+        // Disk/Washer: Horizontal slice
+        // Rotate around Y in local space, so radius is X, height is Y.
+        // We will rotate the entire mesh by -PI/2 later to align with X axis.
+        pts.push(new THREE.Vector2(radiusInner * scale, xStart * scale));
+        pts.push(new THREE.Vector2(radius * scale, xStart * scale));
+        pts.push(new THREE.Vector2(radius * scale, xEnd * scale));
+        pts.push(new THREE.Vector2(radiusInner * scale, xEnd * scale));
+        pts.push(new THREE.Vector2(radiusInner * scale, xStart * scale));
+
+        geoms.push({
+            geom: new THREE.LatheGeometry(pts, 32),
+            pos: [0, parsedAxis.value * scale, 0],
+            rot: [0, 0, -Math.PI / 2]
+        });
+      } else {
+        // Shell: Vertical slice
+        const vRadiusStart = Math.abs(xStart - parsedAxis.value) * scale;
+        const vRadiusEnd = Math.abs(xEnd - parsedAxis.value) * scale;
+        
+        let h1 = yInner * scale;
+        let h2 = yOuter * scale;
+
+        if (h1 > h2) {
+            const temp = h1;
+            h1 = h2;
+            h2 = temp;
+        }
+        
+        pts.push(new THREE.Vector2(vRadiusStart, h1));
+        pts.push(new THREE.Vector2(vRadiusEnd, h1));
+        pts.push(new THREE.Vector2(vRadiusEnd, h2));
+        pts.push(new THREE.Vector2(vRadiusStart, h2));
+        pts.push(new THREE.Vector2(vRadiusStart, h1));
+        
+        geoms.push({
+            geom: new THREE.LatheGeometry(pts, 32),
+            pos: [parsedAxis.value * scale, 0, 0],
+            rot: [0, 0, 0]
+        });
+      }
+    }
+    return geoms;
+  }, [showApproximation, compiled, compiledInner, n, a, dx, scale, parsedAxis]);
+
+  // For smooth (non-approximation) mode, use a single continuous LatheGeometry
+  const smoothGeometry = useMemo(() => {
+    if (showApproximation || !compiled) return null;
+    const points: THREE.Vector2[] = [];
+    const smoothN = 64;
+    const smoothDx = (b - a) / smoothN;
+    
+    const outerCurve: THREE.Vector2[] = [];
+    const innerCurve: THREE.Vector2[] = [];
+
+    for (let i = 0; i <= smoothN; i++) {
+      const x = a + i * smoothDx;
+      let y = 0; 
+      let yIn = 0;
+      try { 
+          y = compiled.evaluate({ x }); 
+          if (compiledInner) yIn = compiledInner.evaluate({ x });
+      } catch (e) { }
+      
+      let radiusOuter = y - parsedAxis.value;
+      let radiusInner = yIn - parsedAxis.value;
+      
+      if (Math.abs(radiusInner) > Math.abs(radiusOuter)) {
+          const temp = radiusOuter;
+          radiusOuter = radiusInner;
+          radiusInner = temp;
+      }
+      
+      radiusOuter = Math.abs(radiusOuter);
+      radiusInner = Math.abs(radiusInner);
+
+      if (parsedAxis.type === 'horizontal') {
+         outerCurve.push(new THREE.Vector2(radiusOuter * scale, x * scale));
+         innerCurve.push(new THREE.Vector2(radiusInner * scale, x * scale));
+      } else {
+         const vRadius = Math.abs(x - parsedAxis.value) * scale;
+         let h1 = yIn * scale;
+         let h2 = y * scale;
+         if (h1 > h2) {
+             const temp = h1;
+             h1 = h2;
+             h2 = temp;
+         }
+         // For shell smooth we only care about outer/inner curve bounds
+         outerCurve.push(new THREE.Vector2(vRadius, h2));
+         innerCurve.push(new THREE.Vector2(vRadius, h1));
+      }
+    }
+    
+    // Connect outer curve and inner curve backwards to form a closed loop
+    points.push(...outerCurve);
+    points.push(...innerCurve.reverse());
+    points.push(outerCurve[0]); // Close the loop
+
+    return new THREE.LatheGeometry(points, 64);
+  }, [showApproximation, compiled, compiledInner, a, b, scale, parsedAxis]);
+
+  if (showApproximation) {
+      return (
+          <group>
+             {approximationGeometries.map((data, idx) => (
+                 <mesh key={idx} geometry={data.geom} position={data.pos} rotation={data.rot}>
+                     <meshStandardMaterial color={color} side={THREE.DoubleSide} transparent opacity={0.6} />
+                 </mesh>
+             ))}
+          </group>
+      );
+  }
+
+  if (!showApproximation && smoothGeometry) {
+    return (
+      <group>
+        <mesh 
+          geometry={smoothGeometry} 
+          rotation={parsedAxis.type === 'horizontal' ? [0, 0, -Math.PI / 2] : [0, 0, 0]}
+          position={parsedAxis.type === 'horizontal' ? [0, parsedAxis.value * scale, 0] : [parsedAxis.value * scale, 0, 0]}
+        >
+          <meshStandardMaterial color={color} side={THREE.DoubleSide} transparent opacity={0.6} />
+        </mesh>
+      </group>
+    );
+  }
+
+  return null;
 }
 
 // Intercepts scroll wheel and pinch gestures to change the math range instead of moving the camera
@@ -270,6 +458,7 @@ function SmoothRange({ targetRange, onRangeUpdate }: { targetRange: number; onRa
 
 // Compute nice step for a given range
 function getNiceStep(range: number) {
+  if (range <= 0) return 1;
   const rawStep = (range * 2) / 10;
   const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
   const residual = rawStep / magnitude;
@@ -286,23 +475,22 @@ function SmoothGrid({ range }: { range: number }) {
   // The next finer grid step (half of major)
   const minorStep = majorStep / 2;
 
-  const majorDivs = Math.round((range * 2) / majorStep);
-  const minorDivs = Math.round((range * 2) / minorStep);
+  const majorDivs = Math.max(1, Math.round((range * 2) / majorStep));
+  const minorDivs = Math.max(1, Math.round((range * 2) / minorStep));
 
   // Calculate how close we are to needing the minor grid (0 = just snapped, 1 = about to snap)
-  // As range shrinks, grid lines spread. When they spread "enough", minor lines should appear.
-  const gridSpacingVisual = GRID_SIZE / majorDivs; // visual px per major grid cell
-  const maxSpacing = GRID_SIZE / 5;  // when cells get this big, minor is fully visible
-  const minSpacing = GRID_SIZE / 12; // when cells are this small, minor is invisible
+  const gridSpacingVisual = GRID_SIZE / majorDivs;
+  const maxSpacing = GRID_SIZE / 5;
+  const minSpacing = GRID_SIZE / 12;
   const minorOpacity = Math.max(0, Math.min(1, (gridSpacingVisual - minSpacing) / (maxSpacing - minSpacing)));
 
   return (
     <>
       {/* Major grid — always fully visible */}
-      <gridHelper args={[GRID_SIZE, majorDivs, '#444444', '#333333']} />
+      <gridHelper args={[GRID_SIZE, majorDivs, 0x444444, 0x333333]} />
       {/* Minor grid — fades in as you zoom toward next breakpoint */}
       {minorOpacity > 0.01 && (
-        <gridHelper args={[GRID_SIZE, minorDivs, new THREE.Color('#444444'), new THREE.Color(`rgba(60,60,60,${minorOpacity})`)]} />
+        <gridHelper args={[GRID_SIZE, minorDivs, 0x333333, 0x222222]} />
       )}
     </>
   );
@@ -342,21 +530,27 @@ export default function Graph3D({ expressions, className = '', style }: Graph3DP
 
         {/* VISUAL MESHES (With materials and Edges) */}
         <group>
-          {expressions.map((expr) => (
-            expr.meshStyle === 'SOLID'
-              ? <ApproxPrisms key={`vis-${expr.id}`} {...expr} range={range} />
-              : <ComputeGraphMesh 
-                  key={`vis-${expr.id}-${expr.latex}`} 
-                  id={expr.id} 
-                  latex={expr.latex} 
-                  color={expr.color} 
-                  range={range} 
+          {expressions.map((expr) => {
+            if (expr.meshStyle === 'SOLID') {
+              return <ApproxPrisms key={`vis-${expr.id}`} {...expr} range={range} />;
+            } else if (expr.meshStyle === 'REVOLUTION') {
+              return <RevolutionMesh key={`vis-${expr.id}`} {...expr} range={range} />;
+            } else {
+              return (
+                <ComputeGraphMesh
+                  key={`vis-${expr.id}-${expr.latex}`}
+                  id={expr.id}
+                  latex={expr.latex}
+                  color={expr.color}
+                  range={range}
                   xMin={expr.xMin}
                   xMax={expr.xMax}
                   yMin={expr.yMin}
                   yMax={expr.yMax}
                 />
-          ))}
+              );
+            }
+          })}
         </group>
 
         <SmoothRange targetRange={targetRange} onRangeUpdate={setRange} />

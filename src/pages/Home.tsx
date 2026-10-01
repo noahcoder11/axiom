@@ -31,53 +31,18 @@ export default function Home() {
       <main>
         {/* ── Hero ── */}
         <section className="hero">
-          <div className="container">
-            <div className="hero__eyebrow fade-in-up" style={{ animationDelay: '0ms' }}>
-              <div className="hero__eyebrow-dot" />
-              Axiom / Numerical Workspace
-            </div>
-
-            <h1 className="hero__title fade-in-up" style={{ animationDelay: '80ms' }}>
-              Numerical &amp;{' '}
-              <span className="hero__title-gradient">Algorithmic Explorations</span>
+          <div className="container" style={{ textAlign: 'center', padding: '60px 20px' }}>
+            <h1 className="hero__title fade-in-up" style={{ animationDelay: '0ms', fontSize: '3rem', marginBottom: '16px' }}>
+              Interactive <span className="hero__title-gradient">Mathematics</span>
             </h1>
 
-            <p className="hero__subtitle fade-in-up" style={{ animationDelay: '160ms' }}>
-              An interactive visual environment designed to model, test, and analyze complex numerical methods,
-              3D integration geometry, and data structure traversals with high mathematical precision.
+            <p className="hero__subtitle fade-in-up" style={{ animationDelay: '80ms', maxWidth: '600px', margin: '0 auto', fontSize: '1.2rem', color: 'var(--color-text-muted)' }}>
+              Explore calculus, algebra, and algorithms through beautiful, interactive 3D visualizations and tools designed to help you build intuition.
             </p>
           </div>
         </section>
 
         <div className="container">
-          {/* ── Terminal Status Bar ── */}
-          <div className="terminal-status fade-in-up" style={{ animationDelay: '220ms' }}>
-            <div className="terminal-status__group">
-              <div className="terminal-status__item">
-                <span className="terminal-status__indicator" />
-                <span>CORE ENGINE: ONLINE</span>
-              </div>
-              <div className="terminal-status__item">
-                <span className="terminal-status__indicator terminal-status__indicator--active" />
-                <span>WORKSPACE MODULES LOADED</span>
-              </div>
-            </div>
-            <div className="terminal-status__group">
-              <div className="terminal-status__item">
-                <span style={{ color: 'var(--color-text-muted)' }}>ACTIVE DECK:</span>
-                <span style={{ color: 'var(--color-accent)', fontWeight: 'bold' }}>{liveCount} WORKSPACE</span>
-              </div>
-              <div className="terminal-status__item">
-                <span style={{ color: 'var(--color-text-muted)' }}>STAGING:</span>
-                <span style={{ color: 'white', fontWeight: 'bold' }}>{tools.length - liveCount} REGISTERED</span>
-              </div>
-              <div className="terminal-status__item">
-                <span style={{ color: 'var(--color-text-muted)' }}>COMPILER:</span>
-                <span style={{ color: 'white', fontWeight: 'bold' }}>VITE+TSC</span>
-              </div>
-            </div>
-          </div>
-
           {/* ── Filter bar ── */}
           <div className="filter-bar fade-in-up" style={{ animationDelay: '280ms' }}>
             <div className="search-input-wrap">
