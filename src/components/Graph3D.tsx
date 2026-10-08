@@ -197,7 +197,7 @@ function ApproxPrisms({ prismData = [], dx = 1, dy = 1, color = '#e879f9', range
   );
 }
 
-function RevolutionMesh({ latex, latexInner, color = '#7c6fff', range, xMin, xMax, slices = 12, method, parsedAxis = { type: 'horizontal', value: 0 }, showApproximation }: Graph3DExpression & { range: number }) {
+function RevolutionMesh({ latex, latexInner, color = '#7c6fff', range, xMin, xMax, slices = 12, parsedAxis = { type: 'horizontal', value: 0 }, showApproximation }: Graph3DExpression & { range: number }) {
   const halfGrid = GRID_SIZE / 2;
   const scale = halfGrid / range;
 

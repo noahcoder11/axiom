@@ -22,8 +22,6 @@ export default function Home() {
     });
   }, [query, activeTag]);
 
-  const liveCount = tools.filter((t) => !t.wip).length;
-
   return (
     <>
       <Navbar />
